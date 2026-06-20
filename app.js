@@ -132,37 +132,42 @@ audio.onPitchDetected = (frequency) => {
   }
 };
 
-// Keyboard mappings and Note data
-const NOTE_DETAILS = [
-  // White keys
-  { note: 'C4', key: 'a', freq: 261.63, type: 'white', midi: 60, whiteIdx: 0 },
-  { note: 'D4', key: 's', freq: 293.66, type: 'white', midi: 62, whiteIdx: 1 },
-  { note: 'E4', key: 'd', freq: 329.63, type: 'white', midi: 64, whiteIdx: 2 },
-  { note: 'F4', key: 'f', freq: 349.23, type: 'white', midi: 65, whiteIdx: 3 },
-  { note: 'G4', key: 'g', freq: 392.00, type: 'white', midi: 67, whiteIdx: 4 },
-  { note: 'A4', key: 'h', freq: 440.00, type: 'white', midi: 69, whiteIdx: 5 },
-  { note: 'B4', key: 'j', freq: 493.88, type: 'white', midi: 71, whiteIdx: 6 },
-  { note: 'C5', key: 'k', freq: 523.25, type: 'white', midi: 72, whiteIdx: 7 },
-  { note: 'D5', key: 'l', freq: 587.33, type: 'white', midi: 74, whiteIdx: 8 },
-  { note: 'E5', key: ';', freq: 659.25, type: 'white', midi: 76, whiteIdx: 9 },
-  { note: 'F5', key: "'", freq: 698.46, type: 'white', midi: 77, whiteIdx: 10 },
-  { note: 'G5', key: 'z', freq: 783.99, type: 'white', midi: 79, whiteIdx: 11 },
-  { note: 'A5', key: 'x', freq: 880.00, type: 'white', midi: 81, whiteIdx: 12 },
-  { note: 'B5', key: 'c', freq: 987.77, type: 'white', midi: 83, whiteIdx: 13 },
-  { note: 'C6', key: 'v', freq: 1046.50, type: 'white', midi: 84, whiteIdx: 14 },
+// Dynamic 88-Key Generator (A0 to C8)
+function generate88Keys() {
+  const notes = [];
+  const pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   
-  // Black keys (aligned on white key boundaries)
-  { note: 'C#4', key: 'w', freq: 277.18, type: 'black', midi: 61, leftOffset: 1 },
-  { note: 'D#4', key: 'e', freq: 311.13, type: 'black', midi: 63, leftOffset: 2 },
-  { note: 'F#4', key: 't', freq: 369.99, type: 'black', midi: 66, leftOffset: 4 },
-  { note: 'G#4', key: 'y', freq: 415.30, type: 'black', midi: 68, leftOffset: 5 },
-  { note: 'A#4', key: 'u', freq: 466.16, type: 'black', midi: 70, leftOffset: 6 },
-  { note: 'C#5', key: 'o', freq: 554.37, type: 'black', midi: 73, leftOffset: 8 },
-  { note: 'D#5', key: 'p', freq: 622.25, type: 'black', midi: 75, leftOffset: 9 },
-  { note: 'F#5', key: '[', freq: 739.99, type: 'black', midi: 78, leftOffset: 11 },
-  { note: 'G#5', key: ']', freq: 830.61, type: 'black', midi: 80, leftOffset: 12 },
-  { note: 'A#5', key: '\\', freq: 932.33, type: 'black', midi: 82, leftOffset: 13 }
-];
+  let whiteCount = 0;
+  
+  for (let midi = 21; midi <= 108; midi++) {
+    const pitchIdx = (midi - 12) % 12;
+    const octave = Math.floor((midi - 12) / 12);
+    const pitchName = pitches[pitchIdx];
+    const noteName = pitchName + octave;
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    const isBlack = pitchName.includes('#');
+    
+    const noteObj = {
+      note: noteName,
+      freq: freq,
+      type: isBlack ? 'black' : 'white',
+      midi: midi,
+      key: '' // Will be bound dynamically in createPianoKeyboard
+    };
+    
+    if (isBlack) {
+      noteObj.leftOffset = whiteCount;
+    } else {
+      noteObj.whiteIdx = whiteCount;
+      whiteCount++;
+    }
+    
+    notes.push(noteObj);
+  }
+  return notes;
+}
+
+const NOTE_DETAILS = generate88Keys();
 
 // Current octave offset factor
 let octaveShift = 0; // -1, 0, +1 octaves
@@ -285,47 +290,63 @@ function createPianoKeyboard() {
   const container = document.getElementById('piano-keyboard');
   container.innerHTML = ''; // Clear existing
   
-  // 1. First add all white keys
   const whiteKeys = NOTE_DETAILS.filter(k => k.type === 'white');
-  const numWhiteKeys = whiteKeys.length;
+  const numWhiteKeys = whiteKeys.length; // 52
   
+  // QWERTY map centered at C4 (MIDI 60)
+  const qwertyMap = {
+    60: 'a', 61: 'w', 62: 's', 63: 'e', 64: 'd', 65: 'f', 66: 't', 67: 'g', 68: 'y', 
+    69: 'h', 70: 'u', 71: 'j', 72: 'k', 73: 'o', 74: 'l', 75: 'p', 76: ';', 77: "'", 
+    78: '[', 79: 'z', 80: ']', 81: 'x', 82: '\\', 83: 'c', 84: 'v'
+  };
+  
+  // Shift factor (C4 is 60. Shifted base is 60 + octaveShift * 12)
+  const shiftOffset = octaveShift * 12;
+  
+  // 1. Render White Keys
   whiteKeys.forEach(k => {
     const keyEl = document.createElement('div');
     keyEl.className = 'key white';
     keyEl.dataset.note = k.note;
     keyEl.dataset.freq = k.freq;
-    keyEl.dataset.bind = k.key;
+    
+    // Assign dynamic keybind based on octave shift
+    const relativeMidi = k.midi - shiftOffset;
+    const bind = qwertyMap[relativeMidi] || '';
+    if (bind) {
+      keyEl.dataset.bind = bind;
+    }
+    
+    const showLabel = k.note.startsWith('C') || k.note === 'A0' || k.note === 'C8';
     
     keyEl.innerHTML = `
-      <span class="key-note">${k.note}</span>
-      <span class="key-bind">${k.key}</span>
+      <span class="key-note" style="display: ${showLabel ? 'block' : 'none'};">${k.note}</span>
+      ${bind ? `<span class="key-bind">${bind}</span>` : ''}
     `;
-    
     container.appendChild(keyEl);
   });
   
-  // 2. Add all black keys absolutely positioned
+  // 2. Render Black Keys
   const blackKeys = NOTE_DETAILS.filter(k => k.type === 'black');
-  
   blackKeys.forEach(k => {
     const keyEl = document.createElement('div');
     keyEl.className = 'key black';
     keyEl.dataset.note = k.note;
     keyEl.dataset.freq = k.freq;
-    keyEl.dataset.bind = k.key;
     
-    // Position key matching boundary of its leftOffset index
-    // The width of a single white key is 100 / numWhiteKeys
-    const whiteKeyWidthPercent = 100 / numWhiteKeys;
+    const relativeMidi = k.midi - shiftOffset;
+    const bind = qwertyMap[relativeMidi] || '';
+    if (bind) {
+      keyEl.dataset.bind = bind;
+    }
+    
+    const whiteKeyWidthPercent = 100 / 52;
     const offsetLeftPercent = k.leftOffset * whiteKeyWidthPercent;
-    
     keyEl.style.left = `${offsetLeftPercent}%`;
     
     keyEl.innerHTML = `
-      <span class="key-note">${k.note}</span>
-      <span class="key-bind">${k.key}</span>
+      ${bind ? `<span class="key-bind">${bind}</span>` : ''}
     `;
-    
     container.appendChild(keyEl);
   });
   
@@ -337,18 +358,15 @@ function setupKeyMouseEvents() {
   const keys = document.querySelectorAll('.key');
   
   keys.forEach(key => {
-    // Left click/Touch starts note
     const playHandler = (e) => {
       e.preventDefault();
-      // Only trigger if left mouse button or touch
       if (e.type === 'mousedown' && e.button !== 0) return;
       
       const noteName = key.dataset.note;
-      const freq = parseFloat(key.dataset.freq) * Math.pow(2, octaveShift);
+      const freq = parseFloat(key.dataset.freq); // Use absolute exact frequency!
       
       audio.playNote(noteName, freq);
       
-      // Setup release listeners
       const stopHandler = () => {
         audio.stopNote(noteName);
         window.removeEventListener('mouseup', stopHandler);
@@ -368,39 +386,37 @@ function setupKeyMouseEvents() {
 const pressedKeys = new Set();
 
 window.addEventListener('keydown', (e) => {
-  // Ignore keydowns in input fields
   if (e.target.tagName === 'INPUT') return;
   
   const key = e.key.toLowerCase();
   
-  // Metronome toggle hotkey
   if (e.code === 'Space') {
     e.preventDefault();
     toggleMetronome();
     return;
   }
   
-  // Record session hotkey
   if (key === 'r') {
     e.preventDefault();
     toggleRecording();
     return;
   }
   
-  // Clear practice song hotkey
   if (e.code === 'Escape') {
     e.preventDefault();
     stopSongPractice();
     return;
   }
   
-  if (pressedKeys.has(key)) return; // Prevent repeating notes
+  if (pressedKeys.has(key)) return;
   
-  const noteInfo = NOTE_DETAILS.find(k => k.key.toLowerCase() === key);
-  if (noteInfo) {
+  // Find key visually mapped to this keybind currently
+  const keyEl = document.querySelector(`.key[data-bind="${key}"]`);
+  if (keyEl) {
     pressedKeys.add(key);
-    const freq = noteInfo.freq * Math.pow(2, octaveShift);
-    audio.playNote(noteInfo.note, freq);
+    const note = keyEl.dataset.note;
+    const freq = parseFloat(keyEl.dataset.freq);
+    audio.playNote(note, freq);
   }
 });
 
@@ -408,9 +424,9 @@ window.addEventListener('keyup', (e) => {
   const key = e.key.toLowerCase();
   if (pressedKeys.has(key)) {
     pressedKeys.delete(key);
-    const noteInfo = NOTE_DETAILS.find(k => k.key.toLowerCase() === key);
-    if (noteInfo) {
-      audio.stopNote(noteInfo.note);
+    const keyEl = document.querySelector(`.key[data-bind="${key}"]`);
+    if (keyEl) {
+      audio.stopNote(keyEl.dataset.note);
     }
   }
 });
