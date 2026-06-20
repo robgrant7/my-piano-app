@@ -24,6 +24,21 @@
       <h1>Aura Piano</h1>
     </div>
     <div class="header-controls">
+      <div class="mic-status-container" id="mic-container" title="Acoustic Piano Listening via Mic">
+        <button class="btn-icon" id="btn-mic-toggle" style="padding: 4px; background: transparent; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <span id="mic-status-text" style="font-size: 11px; font-weight: 500;">Mic: Off</span>
+        <div class="mic-dot" id="mic-indicator"></div>
+        <div class="mic-level-bar">
+          <div class="mic-level-fill" id="mic-level"></div>
+        </div>
+      </div>
       <div class="switch-container" style="gap: 10px;">
         <span class="switch-label" style="font-size: 12px; color: var(--color-text-muted);">Key Binds</span>
         <label class="switch">
@@ -225,8 +240,21 @@
           </svg>
           Song Practice
         </div>
+        
+        <!-- Practice Mode Selection Tabs -->
+        <div class="practice-mode-selector">
+          <button class="practice-tab active" id="tab-practice-flow" title="Play along in real-time">Flow Mode</button>
+          <button class="practice-tab" id="tab-practice-learn" title="Pauses and waits for notes on your real piano">Learn Mode</button>
+        </div>
+
         <div class="songs-select-list" id="songs-list">
           <!-- Dynamically populated songs list -->
+        </div>
+
+        <!-- Next Note Active Guidance Overlay -->
+        <div class="target-notes-card" id="guidance-card" style="display: none;">
+          <div class="target-notes-title">Acoustic Piano Key:</div>
+          <div class="target-note-badge" id="guidance-note-badge">--</div>
         </div>
       </section>
     </div>

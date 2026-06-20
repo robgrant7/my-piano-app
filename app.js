@@ -5,12 +5,28 @@ const audio = new AudioEngine();
 const canvas = document.getElementById('visualizer');
 const visualizer = new PianoVisualizer(canvas, audio);
 
+// State variables for learning
+let practiceSubMode = 'flow'; // 'flow' or 'learn'
+let currentSongNoteIndex = 0;
+
+// Mic input note stabilizer
+let lastMicDetectedNote = null;
+let micDetectedCount = 0;
+
 // Connect Audio Engine and Visualizer callbacks
 audio.onNoteOn = (note) => {
   visualizer.triggerNoteOn(note);
   document.getElementById('active-note-display').textContent = note;
   const keyEl = document.querySelector(`.key[data-note="${note}"]`);
   if (keyEl) keyEl.classList.add('active');
+  
+  // If in Learn Mode, check if the played key matches the required song note
+  if (activePracticeSong && practiceSubMode === 'learn') {
+    const requiredNote = activePracticeSong.notes[currentSongNoteIndex];
+    if (requiredNote && note === requiredNote.note) {
+      advanceLearnSong();
+    }
+  }
 };
 
 audio.onNoteOff = (note) => {
@@ -41,6 +57,78 @@ audio.onPresetChanged = (preset) => {
   }
   
   updateEnvelopeGraphic();
+};
+
+// Mic level mapping
+audio.onMicLevel = (level) => {
+  const bar = document.getElementById('mic-level');
+  if (bar) {
+    const percentage = Math.min(Math.max(level * 300, 0), 100);
+    bar.style.width = `${percentage}%`;
+  }
+};
+
+// Mic state toggle feedback
+audio.onMicStateChange = (listening, errorMsg) => {
+  const container = document.getElementById('mic-container');
+  const text = document.getElementById('mic-status-text');
+  
+  if (listening) {
+    container.classList.add('listening');
+    text.textContent = 'Mic: On';
+    showToast("Acoustic listening active! Play notes on your real piano.");
+  } else {
+    container.classList.remove('listening');
+    text.textContent = 'Mic: Off';
+    if (errorMsg) {
+      showToast(`Microphone error: ${errorMsg}`, "error");
+    } else {
+      showToast("Acoustic listening stopped.");
+    }
+  }
+};
+
+// Pitch tracker callback (listens to acoustic piano)
+audio.onPitchDetected = (frequency) => {
+  // Convert frequency to MIDI number
+  const midi = Math.round(12 * Math.log2(frequency / 440) + 69);
+  const noteInfo = NOTE_DETAILS.find(k => k.midi === midi);
+  
+  if (noteInfo) {
+    const detectedNote = noteInfo.note;
+    
+    // Stabilize transient microphone reads: note must be heard 2 consecutive frames
+    if (detectedNote === lastMicDetectedNote) {
+      micDetectedCount++;
+    } else {
+      lastMicDetectedNote = detectedNote;
+      micDetectedCount = 1;
+    }
+    
+    if (micDetectedCount >= 2) {
+      // Show note on canvas visualizer
+      visualizer.triggerNoteOn(detectedNote);
+      
+      // Flash keyboard key on screen
+      const keyEl = document.querySelector(`.key[data-note="${detectedNote}"]`);
+      if (keyEl) {
+        keyEl.classList.add('active');
+        // Clear flash after short delay since it is a transient audio read
+        setTimeout(() => {
+          keyEl.classList.remove('active');
+          visualizer.triggerNoteOff(detectedNote);
+        }, 250);
+      }
+      
+      // Check Learn Mode match
+      if (activePracticeSong && practiceSubMode === 'learn') {
+        const requiredNote = activePracticeSong.notes[currentSongNoteIndex];
+        if (requiredNote && detectedNote === requiredNote.note) {
+          advanceLearnSong();
+        }
+      }
+    }
+  }
 };
 
 // Keyboard mappings and Note data
@@ -622,6 +710,7 @@ function startSongPractice(songIdx) {
   
   const song = SONGS[songIdx];
   activePracticeSong = song;
+  currentSongNoteIndex = 0;
   
   // Highlight UI button
   document.querySelectorAll('.song-btn').forEach(b => {
@@ -635,31 +724,64 @@ function startSongPractice(songIdx) {
   // Configure visualizer for practice
   visualizer.practiceMode = true;
   visualizer.currentSongNotes = song.notes;
-  visualizer.songElapsedTime = 0;
   
   // Update header status
-  document.getElementById('current-mode').textContent = `Practice: ${song.name}`;
+  const practiceTitle = practiceSubMode === 'learn' ? `Learn: ${song.name}` : `Practice: ${song.name}`;
+  document.getElementById('current-mode').textContent = practiceTitle;
   document.getElementById('current-mode').style.borderColor = 'var(--color-accent)';
   document.getElementById('current-mode').style.color = 'var(--color-accent)';
   document.getElementById('current-mode').style.background = 'rgba(6, 182, 212, 0.15)';
   
-  showToast(`Practice mode loaded: "${song.name}". Match the falling blocks!`);
-  
-  // Start clock
-  songStartRealTime = Date.now();
-  
-  songPlayInterval = setInterval(() => {
-    const elapsed = Date.now() - songStartRealTime;
-    visualizer.songElapsedTime = elapsed;
+  if (practiceSubMode === 'learn') {
+    // Show required note guidance
+    document.getElementById('guidance-card').style.display = 'flex';
+    const firstNote = song.notes[0];
+    document.getElementById('guidance-note-badge').textContent = firstNote.note;
     
-    // Auto loop back if song finishes (last note ends)
-    const lastNote = song.notes[song.notes.length - 1];
-    const totalLength = lastNote.start + lastNote.duration;
+    // Set time to first note
+    visualizer.songElapsedTime = firstNote.start;
+    showToast(`Learn Mode: Play note "${firstNote.note}" on your acoustic piano to begin!`);
+  } else {
+    // Flow Mode: auto playing scroll
+    document.getElementById('guidance-card').style.display = 'none';
+    visualizer.songElapsedTime = 0;
+    showToast(`Flow Mode loaded: "${song.name}". Play along in real-time!`);
     
-    if (elapsed > totalLength + 2000) { // 2s tail
-      songStartRealTime = Date.now(); // Loop
-    }
-  }, 16); // ~60fps clock update
+    // Start clock
+    songStartRealTime = Date.now();
+    songPlayInterval = setInterval(() => {
+      const elapsed = Date.now() - songStartRealTime;
+      visualizer.songElapsedTime = elapsed;
+      
+      // Auto loop back if song finishes (last note ends)
+      const lastNote = song.notes[song.notes.length - 1];
+      const totalLength = lastNote.start + lastNote.duration;
+      
+      if (elapsed > totalLength + 2000) { // 2s tail
+        songStartRealTime = Date.now(); // Loop
+      }
+    }, 16); // ~60fps clock update
+  }
+}
+
+function advanceLearnSong() {
+  if (!activePracticeSong || practiceSubMode !== 'learn') return;
+  
+  currentSongNoteIndex++;
+  
+  // Clear any existing highlighted keys
+  document.querySelectorAll('.key.highlight').forEach(k => k.classList.remove('highlight'));
+  
+  if (currentSongNoteIndex >= activePracticeSong.notes.length) {
+    showToast("🎉 Song completed! Excellent playing!", "success");
+    stopSongPractice();
+  } else {
+    const nextNote = activePracticeSong.notes[currentSongNoteIndex];
+    document.getElementById('guidance-note-badge').textContent = nextNote.note;
+    
+    // Smoothly shift elapsedTime to the next note start
+    visualizer.songElapsedTime = nextNote.start;
+  }
 }
 
 function stopSongPractice() {
@@ -668,6 +790,10 @@ function stopSongPractice() {
   clearInterval(songPlayInterval);
   songPlayInterval = null;
   activePracticeSong = null;
+  currentSongNoteIndex = 0;
+  
+  // Hide guidance
+  document.getElementById('guidance-card').style.display = 'none';
   
   // Reset highlights on keys
   document.querySelectorAll('.key.highlight').forEach(k => {
@@ -798,6 +924,35 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-close-help').addEventListener('click', closeHelp);
   helpOverlay.addEventListener('click', (e) => {
     if (e.target === helpOverlay) closeHelp();
+  });
+  
+  // Microphone toggle button click
+  document.getElementById('btn-mic-toggle').addEventListener('click', () => {
+    if (audio.isListeningMic) {
+      audio.stopMicListening();
+    } else {
+      audio.startMicListening();
+    }
+  });
+
+  // Flow vs Learn tab toggle clicks
+  const tabFlow = document.getElementById('tab-practice-flow');
+  const tabLearn = document.getElementById('tab-practice-learn');
+
+  tabFlow.addEventListener('click', () => {
+    if (practiceSubMode === 'flow') return;
+    practiceSubMode = 'flow';
+    tabFlow.classList.add('active');
+    tabLearn.classList.remove('active');
+    stopSongPractice();
+  });
+
+  tabLearn.addEventListener('click', () => {
+    if (practiceSubMode === 'learn') return;
+    practiceSubMode = 'learn';
+    tabLearn.classList.add('active');
+    tabFlow.classList.remove('active');
+    stopSongPractice();
   });
   
   // Initial envelope draw

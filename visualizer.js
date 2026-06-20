@@ -229,7 +229,10 @@ class PianoVisualizer {
   }
 
   drawWaveform() {
-    const analyser = this.audioEngine.analyser;
+    const useMic = this.audioEngine.isListeningMic && this.audioEngine.micAnalyser;
+    const analyser = useMic ? this.audioEngine.micAnalyser : this.audioEngine.analyser;
+    if (!analyser) return;
+
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     
@@ -238,15 +241,20 @@ class PianoVisualizer {
     analyser.getByteTimeDomainData(dataArray);
     
     this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.45)';
+    this.ctx.strokeStyle = useMic ? 'rgba(6, 182, 212, 0.55)' : 'rgba(99, 102, 241, 0.45)';
     this.ctx.lineWidth = 2.5;
     this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = 'rgba(99, 102, 241, 0.6)';
+    this.ctx.shadowColor = useMic ? 'rgba(6, 182, 212, 0.6)' : 'rgba(99, 102, 241, 0.6)';
     
     // Create fill gradient under waveform
     const fillGrad = this.ctx.createLinearGradient(0, this.height, 0, this.height - 120);
-    fillGrad.addColorStop(0, 'rgba(168, 85, 247, 0)');
-    fillGrad.addColorStop(1, 'rgba(99, 102, 241, 0.06)');
+    if (useMic) {
+      fillGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
+      fillGrad.addColorStop(1, 'rgba(6, 182, 212, 0.06)');
+    } else {
+      fillGrad.addColorStop(0, 'rgba(168, 85, 247, 0)');
+      fillGrad.addColorStop(1, 'rgba(99, 102, 241, 0.06)');
+    }
     
     this.ctx.beginPath();
     

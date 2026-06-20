@@ -71,6 +71,13 @@ class AudioEngine {
     this.isPlayingRecording = false;
     this.playbackTimeouts = [];
     this.recordingTimerInterval = null;
+
+    // Acoustic Microphone Listening & Pitch Tracking
+    this.micStream = null;
+    this.micSource = null;
+    this.micAnalyser = null;
+    this.isListeningMic = false;
+    this.micAnalysisInterval = null;
   }
 
   // Initialize context on first user interaction
@@ -413,5 +420,166 @@ class AudioEngine {
   
   getSavedTracks() {
     return JSON.parse(localStorage.getItem('aura-piano-tracks') || '[]');
+  }
+
+  // --- ACOUSTIC MIC & PITCH DETECTION ENGINE ---
+
+  async startMicListening() {
+    this.init();
+    if (this.isListeningMic) return true;
+
+    try {
+      this.micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+      
+      this.micSource = this.audioCtx.createMediaStreamSource(this.micStream);
+      
+      // Create separate analyser node for microphone
+      this.micAnalyser = this.audioCtx.createAnalyser();
+      this.micAnalyser.fftSize = 2048; // Large buffer for low pitch frequencies
+      
+      // Pipe stream into analyzer but NOT destination to avoid speaker feedback
+      this.micSource.connect(this.micAnalyser);
+      
+      this.isListeningMic = true;
+      
+      // Start the polling analysis loop
+      this.startPitchDetectionLoop();
+      
+      if (this.onMicStateChange) {
+        this.onMicStateChange(true);
+      }
+      return true;
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      this.isListeningMic = false;
+      if (this.onMicStateChange) {
+        this.onMicStateChange(false, err.message);
+      }
+      return false;
+    }
+  }
+
+  stopMicListening() {
+    if (!this.isListeningMic) return;
+    this.isListeningMic = false;
+    
+    // Stop polling loop
+    if (this.micAnalysisInterval) {
+      cancelAnimationFrame(this.micAnalysisInterval);
+      this.micAnalysisInterval = null;
+    }
+
+    // Stop all media tracks
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(track => track.stop());
+      this.micStream = null;
+    }
+
+    // Disconnect nodes
+    if (this.micSource) {
+      this.micSource.disconnect();
+      this.micSource = null;
+    }
+    this.micAnalyser = null;
+
+    if (this.onMicStateChange) {
+      this.onMicStateChange(false);
+    }
+    if (this.onMicLevel) {
+      this.onMicLevel(0);
+    }
+  }
+
+  startPitchDetectionLoop() {
+    const bufferLength = this.micAnalyser.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    
+    const analyze = () => {
+      if (!this.isListeningMic || !this.micAnalyser) return;
+      
+      this.micAnalyser.getFloatTimeDomainData(dataArray);
+      
+      // 1. Calculate Volume Level (RMS)
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+      
+      // Pass level to UI callback
+      if (this.onMicLevel) {
+        this.onMicLevel(rms);
+      }
+      
+      // 2. Perform Autocorrelation if there is enough sound
+      // Threshold level: RMS > 0.015 (filters ambient quiet noise)
+      if (rms > 0.015) {
+        const pitch = this.autoCorrelate(dataArray, this.audioCtx.sampleRate);
+        if (pitch !== -1 && pitch >= 60 && pitch <= 2000) {
+          // Trigger pitch detection callback
+          if (this.onPitchDetected) {
+            this.onPitchDetected(pitch);
+          }
+        }
+      }
+      
+      this.micAnalysisInterval = requestAnimationFrame(analyze);
+    };
+    
+    this.micAnalysisInterval = requestAnimationFrame(analyze);
+  }
+
+  // AMDF (Average Magnitude Difference Function) Autocorrelation
+  autoCorrelate(buf, sampleRate) {
+    const SIZE = buf.length;
+    const MAX_SAMPLES = Math.floor(SIZE / 2);
+    
+    // Calculate RMS to threshold
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) {
+      const val = buf[i];
+      rms += val * val;
+    }
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.01) return -1; // Not enough signal
+    
+    // We scan frequencies from roughly 60Hz (offset ~735 at 44100Hz) to 2000Hz (offset ~22)
+    const minOffset = Math.floor(sampleRate / 2000);
+    const maxOffset = Math.min(Math.floor(sampleRate / 60), MAX_SAMPLES);
+    
+    let minDifference = 100000;
+    let minDifferenceOffset = -1;
+    
+    for (let offset = minOffset; offset < maxOffset; offset++) {
+      let difference = 0;
+      
+      for (let i = 0; i < MAX_SAMPLES; i++) {
+        difference += Math.abs(buf[i] - buf[i + offset]);
+      }
+      
+      // We look for local minima in difference (which represents maximum correlation)
+      if (difference < minDifference) {
+        minDifference = difference;
+        minDifferenceOffset = offset;
+      }
+    }
+    
+    // Convert difference to correlation score (normalized)
+    const averageMagnitude = minDifference / MAX_SAMPLES;
+    const correlationScore = 1 - averageMagnitude;
+    
+    // We expect a correlation score above 0.88 for a clean periodic signal
+    if (correlationScore > 0.88 && minDifferenceOffset !== -1) {
+      const frequency = sampleRate / minDifferenceOffset;
+      return frequency;
+    }
+    
+    return -1;
   }
 }
