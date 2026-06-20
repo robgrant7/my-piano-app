@@ -977,6 +977,44 @@ footer {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Difficulty selector tabs */
+.difficulty-selector {
+  display: flex;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.difficulty-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  padding: 5px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.difficulty-tab:hover {
+  color: var(--color-primary);
+}
+
+.difficulty-tab.active {
+  background: #ffffff;
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 /* Required Target Notes Display */
 .target-notes-card {
   background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(2, 132, 199, 0.08));

@@ -281,6 +281,22 @@
           <button class="practice-tab" id="tab-practice-learn" title="Pauses and waits for notes on your real piano">Learn Mode</button>
         </div>
 
+        <!-- Difficulty Level Selector -->
+        <div class="difficulty-selector">
+          <button class="difficulty-tab active" id="diff-tab-easy" title="Simplified melody, slower speed">Easy</button>
+          <button class="difficulty-tab" id="diff-tab-medium" title="Melody with simple bass octave ticks">Medium</button>
+          <button class="difficulty-tab" id="diff-tab-hard" title="Fast melody with triad/fifth chord harmonies">Hard</button>
+        </div>
+
+        <!-- Custom Song Search and Type notes -->
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;">
+          <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 0.5px;">Type Song or Notes</div>
+          <div style="display: flex; gap: 4px;">
+            <input type="text" id="input-custom-song" placeholder="e.g. Jingle Bells OR C4 D4 E4 C4" style="flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.7); color: var(--color-text); font-family: var(--font-sans); font-size: 10px; outline: none; transition: var(--transition-smooth);" />
+            <button class="btn-action" id="btn-load-custom-song" style="padding: 4px 10px; font-size: 10px; font-weight: 700; border-radius: 6px; cursor: pointer;">Load</button>
+          </div>
+        </div>
+
         <div class="songs-select-list" id="songs-list">
           <!-- Dynamically populated songs list -->
         </div>

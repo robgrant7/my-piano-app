@@ -9,6 +9,7 @@ const visualizer = new PianoVisualizer(canvas, audio);
 let practiceSubMode = 'flow'; // 'flow' or 'learn'
 let currentSongNoteIndex = 0;
 let practiceSpeedMultiplier = 1.0;
+let selectedDifficulty = 'easy'; // 'easy' or 'medium' or 'hard'
 
 // Performance scoring
 let notesAttempted = 0;
@@ -326,6 +327,214 @@ const SONGS = [
     ]
   }
 ];
+
+// --- SONG DATABASE, PARSER, PROCEDURAL Melodies & DIFFICULTY TRANSFORMATIONS ---
+
+const SONG_LIBRARY = {
+  "jingle bells": "E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4 F4 F4 F4 F4 F4 E4 E4 E4 E4 D4 D4 E4 D4 G4",
+  "happy birthday": "C4 C4 D4 C4 F4 E4 C4 C4 D4 C4 G4 F4 C4 C4 C5 A4 F4 E4 D4 A#4 A#4 A4 F4 G4 F4",
+  "canon in d": "F#5 E5 D5 C#5 B4 A4 B4 C#5 F#4 E4 D4 C#4 B3 A3 B3 C#4",
+  "moonlight sonata": "E3 G3 C4 E3 G3 C4 E3 G3 C4 E3 G3 C4 D3 F#3 B3 D3 F#3 B3",
+  "baby shark": "D4 E4 G4 G4 G4 G4 G4 G4 G4 D4 E4 G4 G4 G4 G4 G4 G4 G4 D4 E4 G4 G4 G4 G4 G4 G4 G4 G4 G4 F#4",
+  "star wars": "D4 D4 D4 G4 D5 C5 B4 A4 G5 D5 C5 B4 A4 G5 D5 C5 B4 C5 A4",
+  "ode to joy": "E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4 D4 D4 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4 C4 C4",
+  "fur elise": "E5 D#5 E5 D#5 E5 B4 D5 C5 A4 C4 E4 A4 B4 E4 G#4 B4 C5"
+};
+
+function normalizeNoteName(name) {
+  const flatToSharp = {
+    'DB': 'C#', 'EB': 'D#', 'GB': 'F#', 'AB': 'G#', 'BB': 'A#'
+  };
+  let normalized = name.toUpperCase();
+  const matches = normalized.match(/^([A-G]B)(\d)$/i);
+  if (matches) {
+    const flatNote = matches[1].toUpperCase();
+    const octave = matches[2];
+    if (flatToSharp[flatNote]) {
+      return flatToSharp[flatNote] + octave;
+    }
+  }
+  return normalized;
+}
+
+function parseNoteString(str) {
+  const tokens = str.trim().split(/\s+/);
+  const notes = [];
+  let elapsed = 0;
+  
+  tokens.forEach(token => {
+    const matches = token.match(/^([A-G][#B]?\d)(?::(\d+))?$/i);
+    if (matches) {
+      const noteName = normalizeNoteName(matches[1]);
+      const duration = matches[2] ? parseInt(matches[2]) : 400;
+      notes.push({
+        note: noteName,
+        start: elapsed,
+        duration: duration
+      });
+      elapsed += duration + 100; // 100ms silence gap between notes
+    }
+  });
+  
+  return notes;
+}
+
+function generateProceduralSong(seedText) {
+  // Seeded random number generator
+  let hash = 0;
+  for (let i = 0; i < seedText.length; i++) {
+    hash = seedText.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const random = function() {
+    const x = Math.sin(hash++) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  // C major scale notes in treble range
+  const scale = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'];
+  
+  const songLength = 16 + Math.floor(random() * 16); // 16 to 32 notes
+  const notes = [];
+  let elapsed = 0;
+  let currentIdx = 4; // Start at G4
+  
+  for (let i = 0; i < songLength; i++) {
+    const r = random();
+    let step = 0;
+    if (r < 0.35) step = -1;
+    else if (r > 0.65) step = 1;
+    
+    // Leaps
+    if (random() < 0.1) {
+      step = step * 3;
+    }
+    
+    currentIdx += step;
+    if (currentIdx < 0) currentIdx = 1;
+    if (currentIdx >= scale.length) currentIdx = scale.length - 2;
+    
+    const noteName = scale[currentIdx];
+    const duration = random() > 0.75 ? 800 : 400;
+    
+    notes.push({
+      note: noteName,
+      start: elapsed,
+      duration: duration
+    });
+    
+    elapsed += duration + 100;
+  }
+  
+  return notes;
+}
+
+function getMidiNumber(noteName) {
+  const info = NOTE_DETAILS.find(k => k.note === noteName);
+  return info ? info.midi : 60;
+}
+
+function getNoteNameFromMidi(midi) {
+  const info = NOTE_DETAILS.find(k => k.midi === midi);
+  return info ? info.note : "C4";
+}
+
+function applyDifficultyToNotes(notes, difficulty) {
+  const cloned = notes.map(n => ({
+    note: n.note,
+    start: n.start,
+    duration: n.duration,
+    midi: getMidiNumber(n.note)
+  }));
+  
+  if (difficulty === 'easy') {
+    // Keep only highest pitch note at any starting point
+    const uniqueMap = {};
+    cloned.forEach(n => {
+      if (!uniqueMap[n.start] || n.midi > uniqueMap[n.start].midi) {
+        uniqueMap[n.start] = n;
+      }
+    });
+    
+    let simplified = Object.values(uniqueMap).sort((a, b) => a.start - b.start);
+    
+    // Slow down tempo (1.4x factor)
+    simplified.forEach(n => {
+      n.start = Math.round(n.start * 1.4);
+      n.duration = Math.round(n.duration * 1.4);
+    });
+    
+    return simplified;
+    
+  } else if (difficulty === 'medium') {
+    // Standard speed (1.0x), plus a single bass octave note playing every 1.6s bar
+    const withBass = [];
+    let lastBassTime = -2000;
+    
+    cloned.sort((a, b) => a.start - b.start).forEach(n => {
+      withBass.push(n);
+      
+      if (n.start >= lastBassTime + 1600) {
+        const bassMidi = n.midi - 24; // 2 octaves down
+        if (bassMidi >= 21) {
+          withBass.push({
+            note: getNoteNameFromMidi(bassMidi),
+            start: n.start,
+            duration: Math.max(n.duration, 800),
+            midi: bassMidi,
+            isBass: true
+          });
+          lastBassTime = n.start;
+        }
+      }
+    });
+    
+    return withBass.sort((a, b) => a.start - b.start);
+    
+  } else { // Hard Mode
+    // Speed up tempo (0.85x factor), chord harmonies triggered on beat
+    const spedUp = cloned.map(n => ({
+      note: n.note,
+      start: Math.round(n.start * 0.85),
+      duration: Math.round(n.duration * 0.85),
+      midi: n.midi
+    }));
+    
+    const withChords = [];
+    let lastChordTime = -1000;
+    
+    spedUp.sort((a, b) => a.start - b.start).forEach(n => {
+      withChords.push(n);
+      
+      if (n.start >= lastChordTime + 1000) {
+        const fifthMidi = n.midi - 17; // 1 octave + fifth down
+        const octMidi = n.midi - 12; // 1 octave down
+        
+        if (octMidi >= 21) {
+          withChords.push({
+            note: getNoteNameFromMidi(octMidi),
+            start: n.start,
+            duration: n.duration,
+            midi: octMidi,
+            isBass: true
+          });
+        }
+        if (fifthMidi >= 21) {
+          withChords.push({
+            note: getNoteNameFromMidi(fifthMidi),
+            start: n.start,
+            duration: n.duration,
+            midi: fifthMidi,
+            isBass: true
+          });
+        }
+        lastChordTime = n.start;
+      }
+    });
+    
+    return withChords.sort((a, b) => a.start - b.start);
+  }
+}
 
 // Metronome state variables
 let metronomeInterval = null;
@@ -782,8 +991,26 @@ function toggleSongPractice(songIdx) {
 function startSongPractice(songIdx) {
   stopSongPractice(); // Clean up current song if any
   
-  const song = SONGS[songIdx];
-  activePracticeSong = song;
+  let song;
+  if (typeof songIdx === 'object') {
+    song = songIdx;
+  } else {
+    song = SONGS[songIdx];
+  }
+  
+  if (!song || !song.notes) return;
+  
+  // Transform notes based on selected difficulty
+  const transformedNotes = applyDifficultyToNotes(song.notes, selectedDifficulty);
+  
+  // Setup active practice song state
+  activePracticeSong = {
+    name: song.name,
+    difficulty: selectedDifficulty,
+    notes: transformedNotes,
+    originalNotes: song.notes
+  };
+  
   currentSongNoteIndex = 0;
   
   // Reset performance variables
@@ -793,7 +1020,7 @@ function startSongPractice(songIdx) {
   maxStreak = 0;
   
   // Reset all note play markers and scoring flags
-  song.notes.forEach(n => {
+  activePracticeSong.notes.forEach(n => {
     n.played = false;
     n.stopped = false;
     n.isEvaluated = false;
@@ -802,7 +1029,7 @@ function startSongPractice(songIdx) {
   
   // Highlight UI button
   document.querySelectorAll('.song-btn').forEach(b => {
-    if (parseInt(b.dataset.index) === songIdx) {
+    if (typeof songIdx === 'number' && parseInt(b.dataset.index) === songIdx) {
       b.classList.add('active');
     } else {
       b.classList.remove('active');
@@ -811,14 +1038,14 @@ function startSongPractice(songIdx) {
   
   // Configure visualizer for practice
   visualizer.practiceMode = true;
-  visualizer.currentSongNotes = song.notes;
+  visualizer.currentSongNotes = activePracticeSong.notes;
   
   // Update header status
   let modeLabel = "Practice";
   if (practiceSubMode === 'learn') modeLabel = "Learn";
   if (practiceSubMode === 'demo') modeLabel = "Demo";
   
-  const practiceTitle = `${modeLabel}: ${song.name}`;
+  const practiceTitle = `${modeLabel}: ${activePracticeSong.name}`;
   document.getElementById('current-mode').textContent = practiceTitle;
   document.getElementById('current-mode').style.borderColor = 'var(--color-accent)';
   document.getElementById('current-mode').style.color = 'var(--color-accent)';
@@ -827,7 +1054,7 @@ function startSongPractice(songIdx) {
   if (practiceSubMode === 'learn') {
     // Show required note guidance
     document.getElementById('guidance-card').style.display = 'flex';
-    const firstNote = song.notes[0];
+    const firstNote = activePracticeSong.notes[0];
     document.getElementById('guidance-note-badge').textContent = firstNote.note;
     
     // Set time to first note
@@ -839,9 +1066,9 @@ function startSongPractice(songIdx) {
     visualizer.songElapsedTime = 0;
     
     if (practiceSubMode === 'demo') {
-      showToast(`Demo Mode loaded: Watch and listen to "${song.name}"`);
+      showToast(`Demo Mode loaded: Watch and listen to "${activePracticeSong.name}"`);
     } else {
-      showToast(`Flow Mode loaded: "${song.name}". Play along in real-time!`);
+      showToast(`Flow Mode loaded: "${activePracticeSong.name}". Play along in real-time!`);
     }
     
     // Start clock with speed support
@@ -856,7 +1083,7 @@ function startSongPractice(songIdx) {
       
       // Auto-play notes if in Demo Mode
       if (practiceSubMode === 'demo') {
-        song.notes.forEach(note => {
+        activePracticeSong.notes.forEach(note => {
           // Play note-on when reached
           if (elapsed >= note.start && !note.played) {
             note.played = true;
@@ -878,7 +1105,7 @@ function startSongPractice(songIdx) {
       
       // Evaluate missed notes in Flow Mode
       if (practiceSubMode === 'flow') {
-        song.notes.forEach(note => {
+        activePracticeSong.notes.forEach(note => {
           if (elapsed > note.start + 400 && !note.isEvaluated) {
             note.isEvaluated = true;
             note.isHit = false;
@@ -890,7 +1117,7 @@ function startSongPractice(songIdx) {
       }
       
       // Auto loop or complete if song finishes
-      const lastNote = song.notes[song.notes.length - 1];
+      const lastNote = activePracticeSong.notes[activePracticeSong.notes.length - 1];
       const totalLength = lastNote.start + lastNote.duration;
       
       if (elapsed > totalLength + 1500) {
@@ -902,7 +1129,7 @@ function startSongPractice(songIdx) {
           audio.allNotesOff();
           
           // Reset note flags
-          song.notes.forEach(n => {
+          activePracticeSong.notes.forEach(n => {
             n.played = false;
             n.stopped = false;
           });
@@ -1013,6 +1240,54 @@ function stopSongPractice() {
   document.getElementById('current-mode').style.background = 'rgba(99, 102, 241, 0.15)';
   
   showToast("Practice song cleared. Returned to Free Play.");
+}
+
+function loadCustomSong() {
+  const inputEl = document.getElementById('input-custom-song');
+  const query = inputEl.value.trim();
+  if (!query) {
+    showToast("Type a song name or notes list first!", "warning");
+    return;
+  }
+  
+  let notes = [];
+  let name = "";
+  
+  const lowerQuery = query.toLowerCase();
+  const libraryKey = Object.keys(SONG_LIBRARY).find(k => k.includes(lowerQuery) || lowerQuery.includes(k));
+  
+  if (libraryKey) {
+    name = libraryKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    notes = parseNoteString(SONG_LIBRARY[libraryKey]);
+    showToast(`Loaded "${name}" from library! 🎵`);
+  } else {
+    const tokens = query.split(/\s+/);
+    const validNotesCount = tokens.filter(t => t.match(/^([A-G][#B]?\d)(?::\d+)?$/i)).length;
+    
+    if (validNotesCount >= 2 && validNotesCount >= tokens.length * 0.5) {
+      name = "Typed Song";
+      notes = parseNoteString(query);
+      showToast(`Loaded ${notes.length} typed notes! 🎹`);
+    } else {
+      name = query.substring(0, 20);
+      name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      notes = generateProceduralSong(query);
+      showToast(`Generated procedural tune for "${name}"! 🌊🌴`);
+    }
+  }
+  
+  if (notes.length === 0) {
+    showToast("Could not parse notes. Format should be e.g. C4 D4 E4", "error");
+    return;
+  }
+  
+  const customSong = {
+    name: name,
+    difficulty: selectedDifficulty,
+    notes: notes
+  };
+  
+  startSongPractice(customSong);
 }
 
 // --- SETUP EVENT LISTENERS & BOOT ---
@@ -1175,6 +1450,61 @@ document.addEventListener('DOMContentLoaded', () => {
       tabSheet.classList.add('active');
       tabWaterfall.classList.remove('active');
       visualizer.currentView = 'sheet';
+    });
+  }
+
+  // Difficulty toggle tabs
+  const diffEasy = document.getElementById('diff-tab-easy');
+  const diffMedium = document.getElementById('diff-tab-medium');
+  const diffHard = document.getElementById('diff-tab-hard');
+
+  const setDifficulty = (diff) => {
+    selectedDifficulty = diff;
+    [diffEasy, diffMedium, diffHard].forEach(t => {
+      if (t) t.classList.remove('active');
+    });
+    
+    if (diff === 'easy' && diffEasy) diffEasy.classList.add('active');
+    if (diff === 'medium' && diffMedium) diffMedium.classList.add('active');
+    if (diff === 'hard' && diffHard) diffHard.classList.add('active');
+    
+    showToast(`Difficulty set to ${diff.toUpperCase()}`);
+    
+    // If a song is currently playing, reload it with the new difficulty
+    if (activePracticeSong) {
+      const currentName = activePracticeSong.name;
+      const songIdx = SONGS.findIndex(s => s.name === currentName);
+      
+      if (songIdx !== -1) {
+        startSongPractice(songIdx);
+      } else if (activePracticeSong.originalNotes) {
+        const originalSong = {
+          name: activePracticeSong.name,
+          notes: activePracticeSong.originalNotes
+        };
+        startSongPractice(originalSong);
+      } else {
+        stopSongPractice();
+      }
+    }
+  };
+
+  if (diffEasy) diffEasy.addEventListener('click', () => setDifficulty('easy'));
+  if (diffMedium) diffMedium.addEventListener('click', () => setDifficulty('medium'));
+  if (diffHard) diffHard.addEventListener('click', () => setDifficulty('hard'));
+
+  // Custom song input and load button
+  const btnLoadCustom = document.getElementById('btn-load-custom-song');
+  const inputCustom = document.getElementById('input-custom-song');
+
+  if (btnLoadCustom) {
+    btnLoadCustom.addEventListener('click', loadCustomSong);
+  }
+  if (inputCustom) {
+    inputCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        loadCustomSong();
+      }
     });
   }
 
