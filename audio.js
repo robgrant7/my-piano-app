@@ -24,43 +24,43 @@ class AudioEngine {
     this.masterVolume = 0.8; // 0 to 1
     this.filterCutoff = 8000; // Hz
     
-    // Presets configurations
+    // Presets configurations (beach theme instrument mapping)
     this.presets = {
-      piano: {
-        waveforms: ['triangle', 'sine'],
-        detune: 5,
-        attack: 0.02,
-        decay: 1.2,
+      piano: { // Steelpan
+        waveforms: ['sine', 'triangle'],
+        detune: 12, // Bright chimey octave detune
+        attack: 0.004,
+        decay: 0.8,
         sustain: 0.1,
-        release: 0.8,
-        filterCutoff: 4000
-      },
-      pad: {
-        waveforms: ['sawtooth', 'triangle'],
-        detune: 12,
-        attack: 0.4,
-        decay: 1.5,
-        sustain: 0.7,
-        release: 1.5,
-        filterCutoff: 1200
-      },
-      retro: {
-        waveforms: ['square', 'sawtooth'],
-        detune: 8,
-        attack: 0.01,
-        decay: 0.2,
-        sustain: 0.4,
-        release: 0.3,
-        filterCutoff: 2500
-      },
-      epiano: {
-        waveforms: ['sine', 'sine'], // FM synthesis style simulated by detuning & envelope shapes
-        detune: 18,
-        attack: 0.005,
-        decay: 0.4,
-        sustain: 0.3,
         release: 0.6,
-        filterCutoff: 6000
+        filterCutoff: 6500
+      },
+      pad: { // Ocean Breeze pad
+        waveforms: ['sine', 'triangle'],
+        detune: 6,
+        attack: 0.6,
+        decay: 1.6,
+        sustain: 0.75,
+        release: 1.8,
+        filterCutoff: 1100
+      },
+      retro: { // Surf Synth
+        waveforms: ['triangle', 'sawtooth'],
+        detune: 10,
+        attack: 0.025,
+        decay: 0.4,
+        sustain: 0.5,
+        release: 0.4,
+        filterCutoff: 2800
+      },
+      epiano: { // Marimba
+        waveforms: ['sine', 'sine'],
+        detune: 18,
+        attack: 0.002,
+        decay: 0.32,
+        sustain: 0.0,
+        release: 0.3,
+        filterCutoff: 2200
       }
     };
 
@@ -190,17 +190,19 @@ class AudioEngine {
       const osc = this.audioCtx.createOscillator();
       osc.type = wave;
       
-      // Calculate detuned frequency for the second oscillator
       if (idx === 0) {
         osc.frequency.value = frequency;
       } else {
-        // Detune secondary oscillator
         osc.frequency.value = frequency;
         osc.detune.value = presetCfg.detune;
         
-        // Custom FM bell sound for FM E-Piano preset
+        // Custom harmonics for beach instruments
         if (this.currentPreset === 'epiano') {
-          osc.frequency.value = frequency * 2; // Modulator harmonic
+          // Marimba: 3rd harmonic wooden resonance
+          osc.frequency.value = frequency * 3.0;
+        } else if (this.currentPreset === 'piano') {
+          // Steelpan: detuned 2nd harmonic ring
+          osc.frequency.value = frequency * 2.0;
         }
       }
       
@@ -284,7 +286,7 @@ class AudioEngine {
     });
   }
 
-  // Play a simple woodblock click for metronome
+  // Play a hollow coconut knock for the beach metronome
   playMetronomeTick(isAccent) {
     this.init();
     if (this.audioCtx.state === 'suspended') {
@@ -292,20 +294,29 @@ class AudioEngine {
     }
     
     const now = this.audioCtx.currentTime;
-    const osc = this.audioCtx.createOscillator();
+    const osc1 = this.audioCtx.createOscillator();
+    const osc2 = this.audioCtx.createOscillator();
     const gain = this.audioCtx.createGain();
     
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(isAccent ? 1200 : 800, now);
+    const freq = isAccent ? 520 : 380;
     
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(freq, now);
     
-    osc.connect(gain);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(freq * 1.5, now); // Wooden/hollow overtone
+    
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035); // Fast decay
+    
+    osc1.connect(gain);
+    osc2.connect(gain);
     gain.connect(this.masterGain);
     
-    osc.start(now);
-    osc.stop(now + 0.06);
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.05);
+    osc2.stop(now + 0.05);
   }
 
   // --- RECORDING SYSTEM ---

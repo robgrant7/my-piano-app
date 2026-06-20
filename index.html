@@ -17,11 +17,12 @@
   <header>
     <div class="logo-container">
       <div class="logo-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        <svg viewBox="0 0 24 24" fill="white">
+          <circle cx="12" cy="12" r="5"></circle>
+          <path stroke="white" stroke-width="2" stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
         </svg>
       </div>
-      <h1>Aura Piano</h1>
+      <h1>Sunny Shore Piano</h1>
     </div>
     <div class="header-controls">
       <div class="mic-status-container" id="mic-container" title="Acoustic Piano Listening via Mic">
@@ -84,36 +85,34 @@
         </div>
         
         <div class="presets-grid">
-          <button class="btn-preset active" data-preset="piano">
+          <button class="btn-preset active" data-preset="piano" title="Bright tropical steelpan tone">
             <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 18V5l12-2v13"></path>
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="18" cy="16" r="3"></circle>
+              <circle cx="12" cy="12" r="9"></circle>
+              <circle cx="8" cy="10" r="1.5"></circle>
+              <circle cx="16" cy="10" r="1.5"></circle>
+              <circle cx="12" cy="15" r="2"></circle>
             </svg>
-            Aura Grand
+            Steelpan
           </button>
-          <button class="btn-preset" data-preset="pad">
+          <button class="btn-preset" data-preset="pad" title="Warm ocean wind sweep pad">
             <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              <path d="M2 10s3-3 5-3 5 3 5 3 3-3 5-3 5 3 5 3M2 14s3-3 5-3 5 3 5 3 3-3 5-3 5 3 5 3"></path>
             </svg>
-            Cosmic Pad
+            Ocean Breeze
           </button>
-          <button class="btn-preset" data-preset="retro">
+          <button class="btn-preset" data-preset="retro" title="60s beach lead surf synth">
             <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18.8 6c-.4-.4-1-.7-1.6-.7h-10.4c-.6 0-1.2.3-1.6.7L2.4 9.8c-.4.4-.6.9-.6 1.4v7c0 1 .8 1.8 1.8 1.8h16.8c1 0 1.8-.8 1.8-1.8v-7c0-.5-.2-1-.6-1.4L18.8 6z"></path>
-              <line x1="6" y1="12" x2="10" y2="12"></line>
-              <line x1="6" y1="15" x2="10" y2="15"></line>
-              <circle cx="16.5" cy="13.5" r="1.5"></circle>
+              <path d="M2 18h20M4 14a8 8 0 0 1 16 0"></path>
             </svg>
-            Retro Lead
+            Surf Synth
           </button>
-          <button class="btn-preset" data-preset="epiano">
+          <button class="btn-preset" data-preset="epiano" title="Resonant percussive wooden marimba tone">
             <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
+              <rect x="3" y="5" width="4" height="14" rx="1"></rect>
+              <rect x="10" y="5" width="4" height="14" rx="1"></rect>
+              <rect x="17" y="5" width="4" height="14" rx="1"></rect>
             </svg>
-            FM E-Piano
+            Marimba
           </button>
         </div>
 
@@ -301,28 +300,28 @@
   <!-- HELP MODAL / SCREEN (hidden by default) -->
   <div id="help-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
     <div style="background: var(--bg-secondary); border: 1px solid var(--glass-border); padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative;">
-      <h2 style="margin-bottom: 20px; font-weight: 700; color: white; display: flex; align-items: center; gap: 10px;">
+      <h2 style="margin-bottom: 20px; font-weight: 700; color: #2c3539; display: flex; align-items: center; gap: 10px;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
-        Welcome to Aura Piano
+        Welcome to Sunny Shore Piano
       </h2>
       <div style="font-size: 14px; color: var(--color-text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
-        <p>Aura Piano is a high-fidelity web synthesizer. Play notes using your mouse/touchscreen or your computer keyboard.</p>
-        <h3 style="color: white; font-size: 15px; margin-top: 10px;">Keyboard Mapping:</h3>
-        <p>White keys map to the home row starting at <strong>A</strong>, and black keys map to the number/letter rows above:</p>
-        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: var(--color-text);">
+        <p>Sunny Shore Piano is a beach-themed learning synthesizer. Practice with the falling bubble guide on the screen positioned above your physical piano.</p>
+        <h3 style="color: #2c3539; font-size: 15px; margin-top: 10px;">Keyboard Mapping (for computer keys):</h3>
+        <p>White keys map to the home row starting at <strong>A</strong>, and black keys map to the letter/symbol rows above:</p>
+        <div style="background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: var(--color-text);">
           White keys:  A  S  D  F  G  H  J  K  L  ;  '  Z  X  C  V<br>
           Black keys:  W  E     T  Y  U     O  P     [  ]  \
         </div>
-        <h3 style="color: white; font-size: 15px; margin-top: 10px;">Key Features:</h3>
+        <h3 style="color: #2c3539; font-size: 15px; margin-top: 10px;">Acoustic Piano Learning:</h3>
         <ul style="padding-left: 20px;">
-          <li><strong>Sound Presets:</strong> Toggle between acoustic, pads, retro lead synth, or FM piano.</li>
-          <li><strong>ADSR Envelope:</strong> Tailor your sound curve (Attack, Decay, Sustain, Release).</li>
-          <li><strong>Recorder:</strong> Record a session, clear it, or play it back.</li>
-          <li><strong>Song Practice:</strong> Click a song in the list to follow along! Highlighted keys will show you which notes to press next.</li>
+          <li><strong>Mic Listening:</strong> Enable the Mic in the header so the app listens to your actual piano.</li>
+          <li><strong>Learn Mode:</strong> Pauses falling notes and waits for you to strike the correct key on your real piano before advancing!</li>
+          <li><strong>Sound Presets:</strong> Play with tropical vibes: Steelpan, Marimba, Surf Synth, or Ocean Breeze.</li>
+          <li><strong>Speed Control:</strong> Slow down the scrolling bubbles to learn at your own pace!</li>
         </ul>
       </div>
       <button class="btn-action" id="btn-close-help" style="width: 100%; padding: 12px; background: var(--color-primary); border-color: var(--color-primary); color: white; font-weight: 600;">

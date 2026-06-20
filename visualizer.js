@@ -1,4 +1,4 @@
-// Aura Piano - Canvas Visualizer & Particle Engine
+// Aura Piano - Canvas Visualizer & Particle Engine (Beach Themed)
 class PianoVisualizer {
   constructor(canvas, audioEngine) {
     this.canvas = canvas;
@@ -19,12 +19,13 @@ class PianoVisualizer {
     this.songSpeed = 1.0;
     this.fallingSpeedFactor = 0.15; // Pixels per ms
     
-    // Colors based on key note frequencies
+    // Beach Theme color palettes (RGB strings)
     this.colors = {
-      purple: '168, 85, 247',
-      indigo: '99, 102, 241',
-      cyan: '6, 182, 212',
-      accent: '0, 242, 254'
+      teal: '13, 148, 136',     // Tropical teal
+      skyBlue: '2, 132, 199',   // Ocean sky blue
+      sandGold: '245, 158, 11',  // Sand gold
+      coral: '225, 29, 72',     // Coral red
+      white: '255, 255, 255'
     };
     
     this.resize();
@@ -83,7 +84,7 @@ class PianoVisualizer {
 
     // Create a continuous wave anchor for this note
     const isBlack = noteName.includes('#');
-    const colorStr = isBlack ? this.colors.purple : this.colors.cyan;
+    const colorStr = isBlack ? this.colors.sandGold : this.colors.teal;
     
     this.activeNoteWaves[noteName] = {
       x: keyPos.center,
@@ -92,18 +93,18 @@ class PianoVisualizer {
       intensity: 1.0
     };
 
-    // Spawn initial particle burst
-    const particleCount = 12;
+    // Spawn initial particle burst (translucent beach bubbles!)
+    const particleCount = 10;
     for (let i = 0; i < particleCount; i++) {
       this.particles.push({
         x: keyPos.center + (Math.random() - 0.5) * (keyPos.width * 0.7),
-        y: this.height,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: -Math.random() * 3 - 1.5,
-        radius: Math.random() * 4 + 2,
-        color: Math.random() > 0.5 ? this.colors.indigo : colorStr,
-        alpha: 1.0,
-        decay: Math.random() * 0.015 + 0.01
+        y: this.height - 10,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: -Math.random() * 2.5 - 1.0,
+        radius: Math.random() * 5 + 3, // Slightly larger bubbles
+        color: Math.random() > 0.5 ? this.colors.skyBlue : this.colors.teal,
+        alpha: 0.9,
+        decay: Math.random() * 0.015 + 0.008
       });
     }
   }
@@ -111,7 +112,6 @@ class PianoVisualizer {
   // Triggered when a note is released
   triggerNoteOff(noteName) {
     if (this.activeNoteWaves[noteName]) {
-      // Allow active note waves to decay instead of instant disappearance
       this.activeNoteWaves[noteName].decaying = true;
     }
   }
@@ -120,13 +120,11 @@ class PianoVisualizer {
   render() {
     this.ctx.clearRect(0, 0, this.width, this.height);
     
-    // 1. Draw Background Gradient
-    const bgGrad = this.ctx.createRadialGradient(
-      this.width / 2, this.height / 2, 10,
-      this.width / 2, this.height / 2, this.width
-    );
-    bgGrad.addColorStop(0, '#0a0c14');
-    bgGrad.addColorStop(1, '#030406');
+    // 1. Draw Beach Sky/Seafoam Background Gradient
+    const bgGrad = this.ctx.createLinearGradient(0, 0, 0, this.height);
+    bgGrad.addColorStop(0, '#e0f2fe'); // Light sky blue
+    bgGrad.addColorStop(0.5, '#bae6fd'); // Tropical turquoise
+    bgGrad.addColorStop(1, '#fef3c7'); // Warm sand bottom
     this.ctx.fillStyle = bgGrad;
     this.ctx.fillRect(0, 0, this.width, this.height);
     
@@ -135,15 +133,15 @@ class PianoVisualizer {
       this.drawFallingNotes();
     }
 
-    // 3. Draw Real-time waveform / frequencies
+    // 3. Draw Real-time waveform / frequencies (rolling ocean waves)
     if (this.showWaveform && this.audioEngine.analyser) {
       this.drawWaveform();
     }
     
-    // 4. Update and Draw Active Note Waves (glowing pillars rising from keys)
+    // 4. Update and Draw Active Note Waves (water column ripples rising from keys)
     this.drawNoteWaves();
 
-    // 5. Update and Draw Particles
+    // 5. Update and Draw Bubbles Particles
     this.drawParticles();
   }
 
@@ -153,21 +151,21 @@ class PianoVisualizer {
       
       this.ctx.save();
       
-      // Draw glowing gradient pillar rising up from key
+      // Draw glowing gradient wave column rising up from key
       const pillarGrad = this.ctx.createLinearGradient(wave.x, this.height, wave.x, 0);
-      pillarGrad.addColorStop(0, `rgba(${wave.color}, ${wave.intensity * 0.35})`);
-      pillarGrad.addColorStop(0.3, `rgba(${wave.color}, ${wave.intensity * 0.15})`);
+      pillarGrad.addColorStop(0, `rgba(${wave.color}, ${wave.intensity * 0.4})`);
+      pillarGrad.addColorStop(0.4, `rgba(${wave.color}, ${wave.intensity * 0.15})`);
       pillarGrad.addColorStop(1, `rgba(${wave.color}, 0)`);
       
       this.ctx.fillStyle = pillarGrad;
       this.ctx.fillRect(wave.x - wave.width / 2, 0, wave.width, this.height);
       
-      // Draw a bright line right at the bottom
+      // Draw a bright water crest line right at the bottom
       this.ctx.strokeStyle = `rgba(${wave.color}, ${wave.intensity})`;
-      this.ctx.lineWidth = 3;
+      this.ctx.lineWidth = 3.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(wave.x - wave.width / 2, this.height - 1.5);
-      this.ctx.lineTo(wave.x + wave.width / 2, this.height - 1.5);
+      this.ctx.moveTo(wave.x - wave.width / 2, this.height - 2);
+      this.ctx.lineTo(wave.x + wave.width / 2, this.height - 2);
       this.ctx.stroke();
       
       this.ctx.restore();
@@ -179,17 +177,16 @@ class PianoVisualizer {
           delete this.activeNoteWaves[noteName];
         }
       } else {
-        // Subtle ripple / pulse while note is held
         wave.intensity = 0.85 + Math.sin(Date.now() * 0.015) * 0.15;
         
-        // Occasionally spawn extra particles while key is held
-        if (Math.random() < 0.15) {
+        // Occasionally spawn extra floating bubbles while key is held
+        if (Math.random() < 0.2) {
           this.particles.push({
             x: wave.x + (Math.random() - 0.5) * (wave.width * 0.6),
-            y: this.height - 5,
-            vx: (Math.random() - 0.5) * 0.8,
-            vy: -Math.random() * 2 - 1,
-            radius: Math.random() * 3 + 1,
+            y: this.height - 12,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: -Math.random() * 1.5 - 0.8,
+            radius: Math.random() * 4 + 2,
             color: wave.color,
             alpha: 0.8,
             decay: Math.random() * 0.02 + 0.01
@@ -203,7 +200,8 @@ class PianoVisualizer {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       
-      p.x += p.vx;
+      // Floaty bubble sine drift physics
+      p.x += p.vx + Math.sin(Date.now() * 0.005 + p.y * 0.02) * 0.5;
       p.y += p.vy;
       p.alpha -= p.decay;
       
@@ -215,19 +213,24 @@ class PianoVisualizer {
       this.ctx.save();
       this.ctx.globalAlpha = p.alpha;
       
-      // Glow effect for particles
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowColor = `rgba(${p.color}, ${p.alpha})`;
-      
-      this.ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+      // Draw hollow sea bubble with stroke and specular highlight reflection
       this.ctx.beginPath();
       this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      this.ctx.strokeStyle = `rgba(${p.color}, ${p.alpha})`;
+      this.ctx.lineWidth = 1.8;
+      this.ctx.stroke();
+      
+      // Specular highlight spot (makes it look like shiny beach water glass)
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha * 0.65})`;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x - p.radius * 0.35, p.y - p.radius * 0.35, p.radius * 0.22, 0, Math.PI * 2);
       this.ctx.fill();
       
       this.ctx.restore();
     }
   }
 
+  // Draw two overlapping rolling ocean waves
   drawWaveform() {
     const useMic = this.audioEngine.isListeningMic && this.audioEngine.micAnalyser;
     const analyser = useMic ? this.audioEngine.micAnalyser : this.audioEngine.analyser;
@@ -235,59 +238,56 @@ class PianoVisualizer {
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
-    
-    // We can show frequency (bars) or time domain (waveform).
-    // Let's draw a beautiful smooth glowing time domain waveform line.
     analyser.getByteTimeDomainData(dataArray);
     
     this.ctx.save();
-    this.ctx.strokeStyle = useMic ? 'rgba(6, 182, 212, 0.55)' : 'rgba(99, 102, 241, 0.45)';
-    this.ctx.lineWidth = 2.5;
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = useMic ? 'rgba(6, 182, 212, 0.6)' : 'rgba(99, 102, 241, 0.6)';
     
-    // Create fill gradient under waveform
-    const fillGrad = this.ctx.createLinearGradient(0, this.height, 0, this.height - 120);
-    if (useMic) {
-      fillGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
-      fillGrad.addColorStop(1, 'rgba(6, 182, 212, 0.06)');
-    } else {
-      fillGrad.addColorStop(0, 'rgba(168, 85, 247, 0)');
-      fillGrad.addColorStop(1, 'rgba(99, 102, 241, 0.06)');
-    }
-    
+    // Wave 1: Teal Ocean Crest
     this.ctx.beginPath();
-    
-    const sliceWidth = this.width / bufferLength;
+    let sliceWidth = this.width / bufferLength;
     let x = 0;
     
     for (let i = 0; i < bufferLength; i++) {
-      const v = dataArray[i] / 128.0; // 0 to 2
-      // Draw centered around the bottom area (e.g. height - 60px)
-      const y = (this.height - 60) + (v - 1.0) * 45;
+      const v = dataArray[i] / 128.0;
+      const phase = Math.sin(Date.now() * 0.003 + i * 0.05) * 6; // Rolling offset
+      const y = (this.height - 70) + (v - 1.0) * 40 + phase;
       
       if (i === 0) {
         this.ctx.moveTo(x, y);
       } else {
         this.ctx.lineTo(x, y);
       }
-      
       x += sliceWidth;
     }
-    
-    this.ctx.lineTo(this.width, this.height - 60);
-    this.ctx.stroke();
-    
-    // Close path to draw the translucent fill
     this.ctx.lineTo(this.width, this.height);
     this.ctx.lineTo(0, this.height);
-    this.ctx.fillStyle = fillGrad;
+    this.ctx.fillStyle = 'rgba(13, 148, 136, 0.22)';
+    this.ctx.fill();
+    
+    // Wave 2: Sky Blue Ocean Undercurrent
+    this.ctx.beginPath();
+    x = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const v = dataArray[i] / 128.0;
+      const phase = Math.sin(Date.now() * 0.002 + i * 0.04 + Math.PI/2) * 8;
+      const y = (this.height - 55) + (v - 1.0) * 35 + phase;
+      
+      if (i === 0) {
+        this.ctx.moveTo(x, y);
+      } else {
+        this.ctx.lineTo(x, y);
+      }
+      x += sliceWidth;
+    }
+    this.ctx.lineTo(this.width, this.height);
+    this.ctx.lineTo(0, this.height);
+    this.ctx.fillStyle = 'rgba(2, 132, 199, 0.18)';
     this.ctx.fill();
     
     this.ctx.restore();
   }
 
-  // Practice Mode: Draw blocks falling from top of screen representing piano keys
+  // Draw capsule/bubble shape falling notes
   drawFallingNotes() {
     const elapsed = this.songElapsedTime;
     const speed = this.fallingSpeedFactor;
@@ -295,66 +295,56 @@ class PianoVisualizer {
     this.ctx.save();
     
     this.currentSongNotes.forEach(note => {
-      // Calculate Y coordinate based on note.start compared to current elapsed time
-      // A note starts falling before its start time
       const timeToStart = note.start - elapsed;
       const duration = note.duration;
       
-      // Calculate vertical position
-      // Y center or top
       const noteHeight = duration * speed;
       const yBottom = this.height - (timeToStart * speed);
       const yTop = yBottom - noteHeight;
       
-      // If it hasn't reached the screen, or has fully passed, skip
       if (yBottom < 0 || yTop > this.height) {
         return;
       }
       
-      // Get physical key X position
       const keyPos = this.getKeyVisualPosition(note.note);
       if (!keyPos) return;
       
       const isBlack = note.note.includes('#');
-      const baseColor = isBlack ? this.colors.purple : this.colors.cyan;
+      const baseColor = isBlack ? this.colors.sandGold : this.colors.teal;
       
-      // Draw falling bar
       this.ctx.beginPath();
       
-      // Soft rounded rectangles for notes
-      const radius = 5;
-      const x = keyPos.left + 2;
-      const w = keyPos.width - 4;
-      const h = Math.max(noteHeight, 10); // Minimum height so it's visible
+      const radius = 6;
+      const x = keyPos.left + 3;
+      const w = keyPos.width - 6;
+      const h = Math.max(noteHeight, 12);
       
-      // Clip rendering y bounds
       const drawY = Math.max(yTop, 0);
       const drawH = yBottom - drawY;
       
       if (drawH > 0) {
-        // Draw card/bar with gradient and glow
+        // Linear gradient representing sunny sea glass
         const barGrad = this.ctx.createLinearGradient(x, drawY, x, drawY + drawH);
-        
-        // Highlight active notes that are currently hitting the bottom key
         const isActive = elapsed >= note.start && elapsed <= (note.start + note.duration);
         
         if (isActive) {
-          barGrad.addColorStop(0, `rgba(255, 255, 255, 0.9)`);
+          // Glow and white hot crest when hitting boundary
+          barGrad.addColorStop(0, '#ffffff');
           barGrad.addColorStop(1, `rgba(${baseColor}, 0.9)`);
           
           this.ctx.shadowBlur = 15;
           this.ctx.shadowColor = `rgba(${baseColor}, 0.8)`;
           
-          // Flash key highlight
           const keyEl = document.querySelector(`.key[data-note="${note.note}"]`);
           if (keyEl && !keyEl.classList.contains('highlight')) {
             keyEl.classList.add('highlight');
           }
         } else {
-          barGrad.addColorStop(0, `rgba(${baseColor}, 0.7)`);
-          barGrad.addColorStop(1, `rgba(${this.colors.indigo}, 0.4)`);
+          // Standard transparent water pill look
+          barGrad.addColorStop(0, `rgba(${baseColor}, 0.75)`);
+          barGrad.addColorStop(1, `rgba(${this.colors.skyBlue}, 0.4)`);
           this.ctx.shadowBlur = 4;
-          this.ctx.shadowColor = `rgba(${baseColor}, 0.3)`;
+          this.ctx.shadowColor = `rgba(${baseColor}, 0.25)`;
           
           const keyEl = document.querySelector(`.key[data-note="${note.note}"]`);
           if (keyEl && keyEl.classList.contains('highlight')) {
@@ -362,14 +352,25 @@ class PianoVisualizer {
           }
         }
         
+        // Draw capsules (rounded rectangle)
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, drawY, w, drawH, radius);
         this.ctx.fillStyle = barGrad;
+        this.ctx.fill();
+        this.ctx.strokeStyle = `rgba(${baseColor}, 0.75)`;
+        this.ctx.lineWidth = 1.5;
+        this.ctx.stroke();
         
-        // Rounded rectangle draw
-        this.ctx.lineJoin = 'round';
-        this.ctx.lineWidth = radius;
-        this.ctx.strokeStyle = barGrad;
-        this.ctx.strokeRect(x + radius/2, drawY + radius/2, w - radius, drawH - radius);
-        this.ctx.fillRect(x + radius/2, drawY + radius/2, w - radius, drawH - radius);
+        // Specular reflection line along the left edge of the bubble pill
+        if (drawH > 10) {
+          this.ctx.beginPath();
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+          this.ctx.lineWidth = 2;
+          this.ctx.lineCap = 'round';
+          this.ctx.moveTo(x + 3, drawY + 6);
+          this.ctx.lineTo(x + 3, drawY + drawH - 6);
+          this.ctx.stroke();
+        }
       }
     });
     
