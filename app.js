@@ -129,7 +129,12 @@ audio.onMicStateChange = (listening, errorMsg) => {
 // Pitch tracker callback (listens to acoustic piano)
 audio.onPitchDetected = (frequency) => {
   // Convert frequency to MIDI number
-  const midi = Math.round(12 * Math.log2(frequency / 440) + 69);
+  let midi = Math.round(12 * Math.log2(frequency / 440) + 69);
+  
+  // Transpose octave to fit C4-C6 range (MIDI 60 to 84)
+  while (midi < 60) midi += 12;
+  while (midi > 84) midi -= 12;
+  
   const noteInfo = NOTE_DETAILS.find(k => k.midi === midi);
   
   if (noteInfo) {
@@ -190,14 +195,14 @@ audio.onPitchDetected = (frequency) => {
   }
 };
 
-// Dynamic 88-Key Generator (A0 to C8)
-function generate88Keys() {
+// Dynamic Key Generator (C4 to C6)
+function generateKeyboardKeys() {
   const notes = [];
   const pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   
   let whiteCount = 0;
   
-  for (let midi = 21; midi <= 108; midi++) {
+  for (let midi = 60; midi <= 84; midi++) {
     const pitchIdx = (midi - 12) % 12;
     const octave = Math.floor((midi - 12) / 12);
     const pitchName = pitches[pitchIdx];
@@ -225,7 +230,7 @@ function generate88Keys() {
   return notes;
 }
 
-const NOTE_DETAILS = generate88Keys();
+const NOTE_DETAILS = generateKeyboardKeys();
 
 // Current octave offset factor
 let octaveShift = 0; // -1, 0, +1 octaves
@@ -440,12 +445,32 @@ function getNoteNameFromMidi(midi) {
 }
 
 function applyDifficultyToNotes(notes, difficulty) {
-  const cloned = notes.map(n => ({
-    note: n.note,
-    start: n.start,
-    duration: n.duration,
-    midi: getMidiNumber(n.note)
-  }));
+  const cloned = notes.map(n => {
+    let midi = getMidiNumber(n.note);
+    
+    // If note is not in our current NOTE_DETAILS catalog, parse its midi value programmatically
+    const NOTE_DETAILS_find = NOTE_DETAILS.find(k => k.note === n.note);
+    if (!NOTE_DETAILS_find) {
+      const map = { 'C':0, 'C#':1, 'D':2, 'D#':3, 'E':4, 'F':5, 'F#':6, 'G':7, 'G#':8, 'A':9, 'A#':10, 'B':11 };
+      const matches = n.note.match(/^([A-G]#?)(\d)$/i);
+      if (matches) {
+        midi = map[matches[1].toUpperCase()] + (parseInt(matches[2]) + 1) * 12;
+      }
+    }
+    
+    // Transpose midi octave to fit C4-C6 range (MIDI 60 to 84)
+    while (midi < 60) midi += 12;
+    while (midi > 84) midi -= 12;
+    
+    const noteName = getNoteNameFromMidi(midi);
+    
+    return {
+      note: noteName,
+      start: n.start,
+      duration: n.duration,
+      midi: midi
+    };
+  });
   
   if (difficulty === 'easy') {
     // Keep only highest pitch note at any starting point
@@ -606,9 +631,11 @@ function createPianoKeyboard() {
       keyEl.dataset.bind = bind;
     }
     
-    const whiteKeyWidthPercent = 100 / 52;
+    const whiteKeyWidthPercent = 100 / numWhiteKeys;
     const offsetLeftPercent = k.leftOffset * whiteKeyWidthPercent;
     keyEl.style.left = `${offsetLeftPercent}%`;
+    keyEl.style.width = `${whiteKeyWidthPercent * 0.6}%`;
+    keyEl.style.marginLeft = `-${whiteKeyWidthPercent * 0.3}%`;
     
     keyEl.innerHTML = `
       ${bind ? `<span class="key-bind">${bind}</span>` : ''}
