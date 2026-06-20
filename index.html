@@ -243,12 +243,21 @@
         
         <!-- Practice Mode Selection Tabs -->
         <div class="practice-mode-selector">
+          <button class="practice-tab" id="tab-practice-demo" title="Watch and listen as the app plays the song">Demo Mode</button>
           <button class="practice-tab active" id="tab-practice-flow" title="Play along in real-time">Flow Mode</button>
           <button class="practice-tab" id="tab-practice-learn" title="Pauses and waits for notes on your real piano">Learn Mode</button>
         </div>
 
         <div class="songs-select-list" id="songs-list">
           <!-- Dynamically populated songs list -->
+        </div>
+
+        <div class="control-item" style="margin-top: 10px; margin-bottom: 5px;">
+          <div class="control-header">
+            <span>Playback Speed</span>
+            <span id="val-practice-speed">1.0x</span>
+          </div>
+          <input type="range" id="slider-practice-speed" min="0.25" max="1.5" step="0.25" value="1.0">
         </div>
 
         <!-- Next Note Active Guidance Overlay -->

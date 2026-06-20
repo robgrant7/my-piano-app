@@ -8,6 +8,7 @@ const visualizer = new PianoVisualizer(canvas, audio);
 // State variables for learning
 let practiceSubMode = 'flow'; // 'flow' or 'learn'
 let currentSongNoteIndex = 0;
+let practiceSpeedMultiplier = 1.0;
 
 // Mic input note stabilizer
 let lastMicDetectedNote = null;
@@ -712,6 +713,12 @@ function startSongPractice(songIdx) {
   activePracticeSong = song;
   currentSongNoteIndex = 0;
   
+  // Reset all note play markers
+  song.notes.forEach(n => {
+    n.played = false;
+    n.stopped = false;
+  });
+  
   // Highlight UI button
   document.querySelectorAll('.song-btn').forEach(b => {
     if (parseInt(b.dataset.index) === songIdx) {
@@ -726,7 +733,11 @@ function startSongPractice(songIdx) {
   visualizer.currentSongNotes = song.notes;
   
   // Update header status
-  const practiceTitle = practiceSubMode === 'learn' ? `Learn: ${song.name}` : `Practice: ${song.name}`;
+  let modeLabel = "Practice";
+  if (practiceSubMode === 'learn') modeLabel = "Learn";
+  if (practiceSubMode === 'demo') modeLabel = "Demo";
+  
+  const practiceTitle = `${modeLabel}: ${song.name}`;
   document.getElementById('current-mode').textContent = practiceTitle;
   document.getElementById('current-mode').style.borderColor = 'var(--color-accent)';
   document.getElementById('current-mode').style.color = 'var(--color-accent)';
@@ -742,23 +753,65 @@ function startSongPractice(songIdx) {
     visualizer.songElapsedTime = firstNote.start;
     showToast(`Learn Mode: Play note "${firstNote.note}" on your acoustic piano to begin!`);
   } else {
-    // Flow Mode: auto playing scroll
+    // Demo Mode or Flow Mode
     document.getElementById('guidance-card').style.display = 'none';
     visualizer.songElapsedTime = 0;
-    showToast(`Flow Mode loaded: "${song.name}". Play along in real-time!`);
     
-    // Start clock
-    songStartRealTime = Date.now();
+    if (practiceSubMode === 'demo') {
+      showToast(`Demo Mode loaded: Watch and listen to "${song.name}"`);
+    } else {
+      showToast(`Flow Mode loaded: "${song.name}". Play along in real-time!`);
+    }
+    
+    // Start clock with speed support
+    let lastTickRealTime = Date.now();
     songPlayInterval = setInterval(() => {
-      const elapsed = Date.now() - songStartRealTime;
-      visualizer.songElapsedTime = elapsed;
+      const now = Date.now();
+      const delta = (now - lastTickRealTime) * practiceSpeedMultiplier;
+      lastTickRealTime = now;
       
-      // Auto loop back if song finishes (last note ends)
+      visualizer.songElapsedTime += delta;
+      const elapsed = visualizer.songElapsedTime;
+      
+      // Auto-play notes if in Demo Mode
+      if (practiceSubMode === 'demo') {
+        song.notes.forEach(note => {
+          // Play note-on when reached
+          if (elapsed >= note.start && !note.played) {
+            note.played = true;
+            // Get frequency mapping
+            const noteInfo = NOTE_DETAILS.find(k => k.note === note.note);
+            if (noteInfo) {
+              const freq = noteInfo.freq * Math.pow(2, octaveShift);
+              audio.playNote(note.note, freq);
+            }
+          }
+          
+          // Stop note-off when duration completed
+          if (elapsed >= (note.start + note.duration) && !note.stopped) {
+            note.stopped = true;
+            audio.stopNote(note.note);
+          }
+        });
+      }
+      
+      // Auto loop back if song finishes
       const lastNote = song.notes[song.notes.length - 1];
       const totalLength = lastNote.start + lastNote.duration;
       
-      if (elapsed > totalLength + 2000) { // 2s tail
-        songStartRealTime = Date.now(); // Loop
+      if (elapsed > totalLength + 1500) {
+        // Reset song elapsed time
+        visualizer.songElapsedTime = 0;
+        audio.allNotesOff();
+        
+        // Reset note flags
+        song.notes.forEach(n => {
+          n.played = false;
+          n.stopped = false;
+        });
+        
+        // Clear screen keyboard active highlights
+        document.querySelectorAll('.key.active').forEach(k => k.classList.remove('active'));
       }
     }, 16); // ~60fps clock update
   }
@@ -935,24 +988,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Flow vs Learn tab toggle clicks
+  // Flow vs Learn vs Demo tab toggle clicks
+  const tabDemo = document.getElementById('tab-practice-demo');
   const tabFlow = document.getElementById('tab-practice-flow');
   const tabLearn = document.getElementById('tab-practice-learn');
 
-  tabFlow.addEventListener('click', () => {
-    if (practiceSubMode === 'flow') return;
-    practiceSubMode = 'flow';
-    tabFlow.classList.add('active');
-    tabLearn.classList.remove('active');
+  const setPracticeTab = (mode) => {
+    practiceSubMode = mode;
+    [tabDemo, tabFlow, tabLearn].forEach(t => t.classList.remove('active'));
+    
+    if (mode === 'demo') tabDemo.classList.add('active');
+    if (mode === 'flow') tabFlow.classList.add('active');
+    if (mode === 'learn') tabLearn.classList.add('active');
+    
     stopSongPractice();
-  });
+  };
 
-  tabLearn.addEventListener('click', () => {
-    if (practiceSubMode === 'learn') return;
-    practiceSubMode = 'learn';
-    tabLearn.classList.add('active');
-    tabFlow.classList.remove('active');
-    stopSongPractice();
+  tabDemo.addEventListener('click', () => setPracticeTab('demo'));
+  tabFlow.addEventListener('click', () => setPracticeTab('flow'));
+  tabLearn.addEventListener('click', () => setPracticeTab('learn'));
+
+  // Speed slider event listener
+  document.getElementById('slider-practice-speed').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    practiceSpeedMultiplier = val;
+    document.getElementById('val-practice-speed').textContent = `${val.toFixed(2)}x`;
   });
   
   // Initial envelope draw
