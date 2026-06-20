@@ -10,6 +10,12 @@ let practiceSubMode = 'flow'; // 'flow' or 'learn'
 let currentSongNoteIndex = 0;
 let practiceSpeedMultiplier = 1.0;
 
+// Performance scoring
+let notesAttempted = 0;
+let notesCorrect = 0;
+let currentStreak = 0;
+let maxStreak = 0;
+
 // Mic input note stabilizer
 let lastMicDetectedNote = null;
 let micDetectedCount = 0;
@@ -24,8 +30,38 @@ audio.onNoteOn = (note) => {
   // If in Learn Mode, check if the played key matches the required song note
   if (activePracticeSong && practiceSubMode === 'learn') {
     const requiredNote = activePracticeSong.notes[currentSongNoteIndex];
-    if (requiredNote && note === requiredNote.note) {
-      advanceLearnSong();
+    if (requiredNote) {
+      if (note === requiredNote.note) {
+        advanceLearnSong();
+      } else {
+        // Wrong note pressed. Reset current streak and increment attempted notes
+        currentStreak = 0;
+        notesAttempted++;
+      }
+    }
+  }
+  
+  // If in Flow Mode, check if it matches an active song note
+  if (activePracticeSong && practiceSubMode === 'flow') {
+    const elapsed = visualizer.songElapsedTime;
+    const matchingNote = activePracticeSong.notes.find(n => 
+      Math.abs(elapsed - n.start) < 400 && 
+      n.note === note && 
+      !n.isEvaluated
+    );
+    if (matchingNote) {
+      matchingNote.isEvaluated = true;
+      matchingNote.isHit = true;
+      notesCorrect++;
+      notesAttempted++;
+      currentStreak++;
+      if (currentStreak > maxStreak) {
+        maxStreak = currentStreak;
+      }
+      showToast(`Hit: ${note}! 🔥`, "success");
+    } else {
+      // Wrong note played in Flow Mode, reset current streak
+      currentStreak = 0;
     }
   }
 };
@@ -126,6 +162,27 @@ audio.onPitchDetected = (frequency) => {
         const requiredNote = activePracticeSong.notes[currentSongNoteIndex];
         if (requiredNote && detectedNote === requiredNote.note) {
           advanceLearnSong();
+        }
+      }
+
+      // Check Flow Mode match
+      if (activePracticeSong && practiceSubMode === 'flow') {
+        const elapsed = visualizer.songElapsedTime;
+        const matchingNote = activePracticeSong.notes.find(n => 
+          Math.abs(elapsed - n.start) < 400 && 
+          n.note === detectedNote && 
+          !n.isEvaluated
+        );
+        if (matchingNote) {
+          matchingNote.isEvaluated = true;
+          matchingNote.isHit = true;
+          notesCorrect++;
+          notesAttempted++;
+          currentStreak++;
+          if (currentStreak > maxStreak) {
+            maxStreak = currentStreak;
+          }
+          showToast(`Hit: ${detectedNote}! 🎙️🔥`, "success");
         }
       }
     }
@@ -729,10 +786,18 @@ function startSongPractice(songIdx) {
   activePracticeSong = song;
   currentSongNoteIndex = 0;
   
-  // Reset all note play markers
+  // Reset performance variables
+  notesAttempted = 0;
+  notesCorrect = 0;
+  currentStreak = 0;
+  maxStreak = 0;
+  
+  // Reset all note play markers and scoring flags
   song.notes.forEach(n => {
     n.played = false;
     n.stopped = false;
+    n.isEvaluated = false;
+    n.isHit = false;
   });
   
   // Highlight UI button
@@ -811,23 +876,40 @@ function startSongPractice(songIdx) {
         });
       }
       
-      // Auto loop back if song finishes
+      // Evaluate missed notes in Flow Mode
+      if (practiceSubMode === 'flow') {
+        song.notes.forEach(note => {
+          if (elapsed > note.start + 400 && !note.isEvaluated) {
+            note.isEvaluated = true;
+            note.isHit = false;
+            notesAttempted++;
+            currentStreak = 0;
+            showToast(`Missed: ${note.note} 🌊`, "warning");
+          }
+        });
+      }
+      
+      // Auto loop or complete if song finishes
       const lastNote = song.notes[song.notes.length - 1];
       const totalLength = lastNote.start + lastNote.duration;
       
       if (elapsed > totalLength + 1500) {
-        // Reset song elapsed time
-        visualizer.songElapsedTime = 0;
-        audio.allNotesOff();
-        
-        // Reset note flags
-        song.notes.forEach(n => {
-          n.played = false;
-          n.stopped = false;
-        });
-        
-        // Clear screen keyboard active highlights
-        document.querySelectorAll('.key.active').forEach(k => k.classList.remove('active'));
+        if (practiceSubMode === 'flow') {
+          finishPracticeSong();
+        } else {
+          // Reset song elapsed time
+          visualizer.songElapsedTime = 0;
+          audio.allNotesOff();
+          
+          // Reset note flags
+          song.notes.forEach(n => {
+            n.played = false;
+            n.stopped = false;
+          });
+          
+          // Clear screen keyboard active highlights
+          document.querySelectorAll('.key.active').forEach(k => k.classList.remove('active'));
+        }
       }
     }, 16); // ~60fps clock update
   }
@@ -836,14 +918,20 @@ function startSongPractice(songIdx) {
 function advanceLearnSong() {
   if (!activePracticeSong || practiceSubMode !== 'learn') return;
   
+  notesCorrect++;
+  notesAttempted++;
+  currentStreak++;
+  if (currentStreak > maxStreak) {
+    maxStreak = currentStreak;
+  }
+  
   currentSongNoteIndex++;
   
   // Clear any existing highlighted keys
   document.querySelectorAll('.key.highlight').forEach(k => k.classList.remove('highlight'));
   
   if (currentSongNoteIndex >= activePracticeSong.notes.length) {
-    showToast("🎉 Song completed! Excellent playing!", "success");
-    stopSongPractice();
+    finishPracticeSong();
   } else {
     const nextNote = activePracticeSong.notes[currentSongNoteIndex];
     document.getElementById('guidance-note-badge').textContent = nextNote.note;
@@ -851,6 +939,47 @@ function advanceLearnSong() {
     // Smoothly shift elapsedTime to the next note start
     visualizer.songElapsedTime = nextNote.start;
   }
+}
+
+function finishPracticeSong() {
+  const songName = activePracticeSong ? activePracticeSong.name : "Practice Song";
+  const subMode = practiceSubMode;
+  
+  stopSongPractice();
+  
+  if (subMode === 'demo') return;
+  
+  const totalNotes = notesAttempted || 1;
+  const accuracy = Math.round((notesCorrect / totalNotes) * 100);
+  const hits = notesCorrect;
+  const misses = Math.max(0, notesAttempted - notesCorrect);
+  const streak = maxStreak;
+  
+  let rating = "Beachcomber 🏖️";
+  if (accuracy >= 95) {
+    rating = "Tiki Maestro 🌺";
+  } else if (accuracy >= 85) {
+    rating = "Surf Virtuoso 🏄‍♂️";
+  } else if (accuracy >= 70) {
+    rating = "Ocean Breeze Maestro 🌊";
+  } else if (accuracy >= 50) {
+    rating = "Sandcastle Builder 🏰";
+  } else if (accuracy >= 25) {
+    rating = "Coconut Jogger 🥥";
+  }
+  
+  document.getElementById('report-song-title').textContent = songName;
+  document.getElementById('report-card-accuracy').textContent = `${accuracy}%`;
+  document.getElementById('report-card-rating').textContent = rating;
+  document.getElementById('report-hits').textContent = hits;
+  document.getElementById('report-misses').textContent = misses;
+  document.getElementById('report-streak').textContent = streak;
+  
+  const overlay = document.getElementById('report-card-overlay');
+  overlay.style.display = 'flex';
+  setTimeout(() => {
+    overlay.classList.add('show');
+  }, 10);
 }
 
 function stopSongPractice() {
@@ -1030,6 +1159,42 @@ document.addEventListener('DOMContentLoaded', () => {
     practiceSpeedMultiplier = val;
     document.getElementById('val-practice-speed').textContent = `${val.toFixed(2)}x`;
   });
+
+  // Canvas View Toggle tabs (Waterfall vs Sheet Music)
+  const tabWaterfall = document.getElementById('view-tab-waterfall');
+  const tabSheet = document.getElementById('view-tab-sheet');
+
+  if (tabWaterfall && tabSheet) {
+    tabWaterfall.addEventListener('click', () => {
+      tabWaterfall.classList.add('active');
+      tabSheet.classList.remove('active');
+      visualizer.currentView = 'waterfall';
+    });
+
+    tabSheet.addEventListener('click', () => {
+      tabSheet.classList.add('active');
+      tabWaterfall.classList.remove('active');
+      visualizer.currentView = 'sheet';
+    });
+  }
+
+  // Performance Report Card close button
+  const btnCloseReport = document.getElementById('btn-close-report');
+  const reportOverlay = document.getElementById('report-card-overlay');
+  
+  if (btnCloseReport && reportOverlay) {
+    const closeReport = () => {
+      reportOverlay.classList.remove('show');
+      setTimeout(() => {
+        reportOverlay.style.display = 'none';
+      }, 300);
+    };
+    
+    btnCloseReport.addEventListener('click', closeReport);
+    reportOverlay.addEventListener('click', (e) => {
+      if (e.target === reportOverlay) closeReport();
+    });
+  }
   
   // Initial envelope draw
   updateEnvelopeGraphic();

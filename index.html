@@ -114,6 +114,36 @@
             </svg>
             Marimba
           </button>
+          <button class="btn-preset" data-preset="uke" title="Short acoustic string pluck ukulele">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v10M10 5h4M10 9h4M12 12a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path>
+            </svg>
+            Ukulele
+          </button>
+          <button class="btn-preset" data-preset="chime" title="High metallic seashell chime ring">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="3" x2="8" y2="21"></line>
+              <line x1="12" y1="3" x2="12" y2="17"></line>
+              <line x1="16" y1="3" x2="16" y2="13"></line>
+              <line x1="4" y1="3" x2="20" y2="3"></line>
+            </svg>
+            Seashell Chime
+          </button>
+          <button class="btn-preset" data-preset="organ" title="Warm rotary tiki organ tone">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              <path d="M2 12h20"></path>
+            </svg>
+            Tiki Organ
+          </button>
+          <button class="btn-preset" data-preset="whale" title="Soft gliding whale call swell pad">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-3-1.5-5.5-4-7.5l-3 3.5"></path>
+              <circle cx="18" cy="8" r="1"></circle>
+            </svg>
+            Whale Call
+          </button>
         </div>
 
         <div class="controls-group">
@@ -165,6 +195,10 @@
       <section class="center-panel" aria-label="Audio Visualizer">
         <div class="visualizer-overlay">
           <div class="mode-badge" id="current-mode">Free Play</div>
+          <div class="canvas-view-toggle">
+            <button class="view-tab active" id="view-tab-waterfall" title="Waterfall View">Waterfall</button>
+            <button class="view-tab" id="view-tab-sheet" title="Sheet Music View">Sheet Music</button>
+          </div>
           <div id="active-note-display" style="font-weight: 700; font-size: 16px; color: var(--color-accent); text-shadow: 0 0 10px var(--color-accent-glow);"></div>
         </div>
         <canvas id="visualizer" class="visualizer-canvas"></canvas>
@@ -326,6 +360,37 @@
       </div>
       <button class="btn-action" id="btn-close-help" style="width: 100%; padding: 12px; background: var(--color-primary); border-color: var(--color-primary); color: white; font-weight: 600;">
         Let's Play
+      </button>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE REPORT CARD MODAL -->
+  <div id="report-card-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>🌊 Song Completed! 🌴</span>
+      </div>
+      <div id="report-song-title" style="font-size: 13px; font-weight: 600; color: var(--color-text-muted); margin-bottom: 8px;">Song Name</div>
+      <div class="report-score" id="report-card-accuracy">0%</div>
+      <div class="report-rating" id="report-card-rating">Tiki Maestro 🌺</div>
+      
+      <div class="report-stats">
+        <div>
+          <div class="stat-val" id="report-hits">0</div>
+          <div class="stat-label">Hits</div>
+        </div>
+        <div>
+          <div class="stat-val" id="report-misses">0</div>
+          <div class="stat-label">Misses</div>
+        </div>
+        <div>
+          <div class="stat-val" id="report-streak">0</div>
+          <div class="stat-label">Max Streak</div>
+        </div>
+      </div>
+      
+      <button class="btn-action" id="btn-close-report" style="width: 100%; padding: 12px; background: var(--color-primary); border-color: var(--color-primary); color: white; font-weight: 700; border-radius: 10px; cursor: pointer;">
+        Catch the Next Wave 🏄‍♂️
       </button>
     </div>
   </div>

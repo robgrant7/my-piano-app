@@ -61,6 +61,42 @@ class AudioEngine {
         sustain: 0.0,
         release: 0.3,
         filterCutoff: 2200
+      },
+      uke: { // Ukulele
+        waveforms: ['triangle', 'sawtooth'],
+        detune: 12,
+        attack: 0.005,
+        decay: 0.25,
+        sustain: 0.0,
+        release: 0.2,
+        filterCutoff: 3000
+      },
+      chime: { // Seashell Chime
+        waveforms: ['sine', 'sine'],
+        detune: 40,
+        attack: 0.002,
+        decay: 1.5,
+        sustain: 0.05,
+        release: 2.0,
+        filterCutoff: 8000
+      },
+      organ: { // Tiki Organ
+        waveforms: ['sawtooth', 'triangle'],
+        detune: 8,
+        attack: 0.04,
+        decay: 0.2,
+        sustain: 0.8,
+        release: 0.3,
+        filterCutoff: 2500
+      },
+      whale: { // Whale Call
+        waveforms: ['sine', 'triangle'],
+        detune: 5,
+        attack: 0.8,
+        decay: 2.0,
+        sustain: 0.7,
+        release: 1.5,
+        filterCutoff: 1200
       }
     };
 
@@ -203,6 +239,18 @@ class AudioEngine {
         } else if (this.currentPreset === 'piano') {
           // Steelpan: detuned 2nd harmonic ring
           osc.frequency.value = frequency * 2.0;
+        } else if (this.currentPreset === 'uke') {
+          // Ukulele: 2nd harmonic resonance
+          osc.frequency.value = frequency * 2.0;
+        } else if (this.currentPreset === 'chime') {
+          // Seashell Chime: highly detuned high metallic resonance
+          osc.frequency.value = frequency * 4.07;
+        } else if (this.currentPreset === 'organ') {
+          // Tiki Organ: warm octave drawbar
+          osc.frequency.value = frequency * 2.0;
+        } else if (this.currentPreset === 'whale') {
+          // Whale Call: low pitch glider harmonic
+          osc.frequency.value = frequency * 0.5;
         }
       }
       
@@ -213,12 +261,25 @@ class AudioEngine {
     
     // Connect Voice Gain to Master Filter
     voiceGain.connect(this.filter);
+
+    // Create vibrato LFO for whale call preset
+    let lfo = null;
+    if (this.currentPreset === 'whale') {
+      lfo = this.audioCtx.createOscillator();
+      lfo.frequency.setValueAtTime(4.5, now); // 4.5Hz warm vibrato
+      const lfoGain = this.audioCtx.createGain();
+      lfoGain.gain.setValueAtTime(15, now); // detune depth
+      lfo.connect(lfoGain);
+      oscillators.forEach(osc => lfoGain.connect(osc.detune));
+      lfo.start(now);
+    }
     
     // Store voice information to trigger Release phase later
     this.activeVoices[noteName] = {
       oscillators: oscillators,
       gainNode: voiceGain,
-      startTime: now
+      startTime: now,
+      lfo: lfo
     };
     
     // Visual trigger callback
@@ -251,6 +312,18 @@ class AudioEngine {
     voice.gainNode.gain.cancelScheduledValues(now);
     voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
     voice.gainNode.gain.setTargetAtTime(0, now, releaseTime);
+
+    // Stop LFO if active
+    if (voice.lfo) {
+      try {
+        voice.lfo.stop(now + (releaseTime * 5));
+        setTimeout(() => {
+          try {
+            voice.lfo.disconnect();
+          } catch (e) {}
+        }, (releaseTime * 5) * 1000 + 100);
+      } catch (e) {}
+    }
     
     // Stop oscillators and disconnect them after release phase finishes
     voice.oscillators.forEach(osc => {
