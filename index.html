@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Piano - Premium Web Synthesizer</title>
+  <meta name="description" content="A visually stunning, interactive web piano app with polyphonic synthesis, sound presets, metronome, recording capabilities, and a practice song mode.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <span id="toast-message"></span>
+  </div>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+      </div>
+      <h1>Aura Piano</h1>
+    </div>
+    <div class="header-controls">
+      <div class="switch-container" style="gap: 10px;">
+        <span class="switch-label" style="font-size: 12px; color: var(--color-text-muted);">Key Binds</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-binds" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+      <div class="switch-container" style="gap: 10px;">
+        <span class="switch-label" style="font-size: 12px; color: var(--color-text-muted);">Waveform Viz</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-waveform" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+      <button class="btn-icon" id="btn-help" title="Keyboard Shortcuts & Help">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="dashboard-grid">
+      <!-- PANEL 1: SYNTH SETTINGS & PRESETS -->
+      <section class="panel" aria-label="Synthesizer Settings">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+            <rect x="9" y="9" width="6" height="6"></rect>
+            <line x1="9" y1="1" x2="9" y2="4"></line>
+            <line x1="15" y1="1" x2="15" y2="4"></line>
+            <line x1="9" y1="20" x2="9" y2="23"></line>
+            <line x1="15" y1="20" x2="15" y2="23"></line>
+            <line x1="20" y1="9" x2="23" y2="9"></line>
+            <line x1="20" y1="15" x2="23" y2="15"></line>
+            <line x1="1" y1="9" x2="4" y2="9"></line>
+            <line x1="1" y1="15" x2="4" y2="15"></line>
+          </svg>
+          Sound Preset
+        </div>
+        
+        <div class="presets-grid">
+          <button class="btn-preset active" data-preset="piano">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            Aura Grand
+          </button>
+          <button class="btn-preset" data-preset="pad">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Cosmic Pad
+          </button>
+          <button class="btn-preset" data-preset="retro">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.8 6c-.4-.4-1-.7-1.6-.7h-10.4c-.6 0-1.2.3-1.6.7L2.4 9.8c-.4.4-.6.9-.6 1.4v7c0 1 .8 1.8 1.8 1.8h16.8c1 0 1.8-.8 1.8-1.8v-7c0-.5-.2-1-.6-1.4L18.8 6z"></path>
+              <line x1="6" y1="12" x2="10" y2="12"></line>
+              <line x1="6" y1="15" x2="10" y2="15"></line>
+              <circle cx="16.5" cy="13.5" r="1.5"></circle>
+            </svg>
+            Retro Lead
+          </button>
+          <button class="btn-preset" data-preset="epiano">
+            <svg class="preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            FM E-Piano
+          </button>
+        </div>
+
+        <div class="controls-group">
+          <div class="control-item">
+            <div class="control-header">
+              <span>Attack</span>
+              <span id="val-attack">0.05s</span>
+            </div>
+            <input type="range" id="slider-attack" min="0.001" max="1" step="0.01" value="0.05">
+          </div>
+          <div class="control-item">
+            <div class="control-header">
+              <span>Decay</span>
+              <span id="val-decay">0.30s</span>
+            </div>
+            <input type="range" id="slider-decay" min="0.01" max="2" step="0.05" value="0.3">
+          </div>
+          <div class="control-item">
+            <div class="control-header">
+              <span>Sustain</span>
+              <span id="val-sustain">0.60</span>
+            </div>
+            <input type="range" id="slider-sustain" min="0" max="1" step="0.05" value="0.6">
+          </div>
+          <div class="control-item">
+            <div class="control-header">
+              <span>Release</span>
+              <span id="val-release">0.50s</span>
+            </div>
+            <input type="range" id="slider-release" min="0.01" max="3" step="0.05" value="0.5">
+          </div>
+          <div class="control-item">
+            <div class="envelope-viz">
+              <svg>
+                <defs>
+                  <linearGradient id="envelope-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="var(--color-primary)" />
+                    <stop offset="100%" stop-color="var(--color-secondary)" />
+                  </linearGradient>
+                </defs>
+                <path id="envelope-curve" d="M 10 50 L 30 10 L 70 25 L 140 25 L 190 50" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 2: MAIN VISUALIZATION CANVAS -->
+      <section class="center-panel" aria-label="Audio Visualizer">
+        <div class="visualizer-overlay">
+          <div class="mode-badge" id="current-mode">Free Play</div>
+          <div id="active-note-display" style="font-weight: 700; font-size: 16px; color: var(--color-accent); text-shadow: 0 0 10px var(--color-accent-glow);"></div>
+        </div>
+        <canvas id="visualizer" class="visualizer-canvas"></canvas>
+      </section>
+
+      <!-- PANEL 3: RECORDER, METRONOME & SONGS -->
+      <section class="panel" aria-label="Session and Track Control">
+        <!-- Metronome Section -->
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Metronome
+        </div>
+        <div class="metronome-controls">
+          <button class="btn-icon" id="btn-metronome-toggle" title="Toggle Metronome">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </button>
+          <div class="metronome-bpm" id="val-bpm">120</div>
+          <input type="range" id="slider-bpm" min="40" max="240" value="120" style="flex: 1;">
+          <div class="metronome-dot" id="metronome-light"></div>
+        </div>
+        <div class="switch-container">
+          <span class="switch-label">Metronome Sound</span>
+          <label class="switch">
+            <input type="checkbox" id="metronome-sound" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Recorder Section -->
+        <div class="panel-title" style="margin-top: 6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          Session Recorder
+        </div>
+        <div class="recorder-panel">
+          <div class="recording-controls">
+            <button class="btn-action record" id="btn-record" title="Record Session">
+              <span class="rec-icon" style="width: 10px; height: 10px; border-radius: 50%; background: currentColor; display: inline-block;"></span>
+              Rec
+            </button>
+            <button class="btn-action play" id="btn-play-recording" title="Play Recording" disabled>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Play
+            </button>
+            <button class="btn-action" id="btn-clear-recording" title="Clear Session" disabled>
+              Clear
+            </button>
+            <span class="record-duration" id="recording-timer">00:00</span>
+          </div>
+          <div class="track-list" id="saved-tracks-list">
+            <!-- Dynamically populated tracks -->
+            <div style="padding: 12px; text-align: center; color: var(--color-text-muted); font-size: 11px;">
+              No saved tracks yet
+            </div>
+          </div>
+        </div>
+
+        <!-- Song Practice Mode Section -->
+        <div class="panel-title" style="margin-top: 6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          Song Practice
+        </div>
+        <div class="songs-select-list" id="songs-list">
+          <!-- Dynamically populated songs list -->
+        </div>
+      </section>
+    </div>
+
+    <!-- PIANO KEYBOARD SECTION -->
+    <section class="keyboard-section">
+      <div class="keyboard-meta">
+        <div class="octave-controls">
+          <span style="font-size: 12px; color: var(--color-text-muted); font-weight: 500; margin-right: 6px;">Base Octave:</span>
+          <button class="octave-btn" id="btn-octave-down" title="Lower Octave">-</button>
+          <span id="current-octave-label" style="font-size: 14px; font-weight: 700; min-width: 24px; text-align: center;">C4</span>
+          <button class="octave-btn" id="btn-octave-up" title="Higher Octave">+</button>
+        </div>
+        
+        <div style="display: flex; gap: 20px;">
+          <div class="control-item" style="flex-direction: row; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--color-text-muted); font-weight: 500;">Filter:</span>
+            <input type="range" id="slider-filter" min="100" max="10000" step="50" value="8000" style="width: 100px;">
+          </div>
+          <div class="control-item" style="flex-direction: row; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--color-text-muted); font-weight: 500;">Volume:</span>
+            <input type="range" id="slider-volume" min="0" max="100" value="80" style="width: 100px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="keyboard-wrapper" id="keyboard-wrapper">
+        <div class="keyboard-container" id="piano-keyboard">
+          <!-- Dynamically generated keys via app.js to handle responsive layout and mappings cleanly -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- HELP MODAL / SCREEN (hidden by default) -->
+  <div id="help-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--glass-border); padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative;">
+      <h2 style="margin-bottom: 20px; font-weight: 700; color: white; display: flex; align-items: center; gap: 10px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        Welcome to Aura Piano
+      </h2>
+      <div style="font-size: 14px; color: var(--color-text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+        <p>Aura Piano is a high-fidelity web synthesizer. Play notes using your mouse/touchscreen or your computer keyboard.</p>
+        <h3 style="color: white; font-size: 15px; margin-top: 10px;">Keyboard Mapping:</h3>
+        <p>White keys map to the home row starting at <strong>A</strong>, and black keys map to the number/letter rows above:</p>
+        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: var(--color-text);">
+          White keys:  A  S  D  F  G  H  J  K  L  ;  '  Z  X  C  V<br>
+          Black keys:  W  E     T  Y  U     O  P     [  ]  \
+        </div>
+        <h3 style="color: white; font-size: 15px; margin-top: 10px;">Key Features:</h3>
+        <ul style="padding-left: 20px;">
+          <li><strong>Sound Presets:</strong> Toggle between acoustic, pads, retro lead synth, or FM piano.</li>
+          <li><strong>ADSR Envelope:</strong> Tailor your sound curve (Attack, Decay, Sustain, Release).</li>
+          <li><strong>Recorder:</strong> Record a session, clear it, or play it back.</li>
+          <li><strong>Song Practice:</strong> Click a song in the list to follow along! Highlighted keys will show you which notes to press next.</li>
+        </ul>
+      </div>
+      <button class="btn-action" id="btn-close-help" style="width: 100%; padding: 12px; background: var(--color-primary); border-color: var(--color-primary); color: white; font-weight: 600;">
+        Let's Play
+      </button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-credits">
+      Aura Piano © 2026. Made with ❤️ and Web Audio API.
+    </div>
+    <div class="footer-shortcuts">
+      <div class="shortcut-info">
+        <kbd class="shortcut-kbd">Space</kbd>
+        <span>Toggle metronome</span>
+      </div>
+      <div class="shortcut-info">
+        <kbd class="shortcut-kbd">R</kbd>
+        <span>Record session</span>
+      </div>
+      <div class="shortcut-info">
+        <kbd class="shortcut-kbd">Esc</kbd>
+        <span>Clear practice song</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="audio.js"></script>
+  <script src="visualizer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
